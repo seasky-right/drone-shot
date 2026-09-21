@@ -1,0 +1,3 @@
+# Build-only dependency lock, mirrored from [build-system].requires.
+# Check it with: python -B scripts/verify_dependency_lock.py
+setuptools==80.9.0

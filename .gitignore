@@ -1,0 +1,42 @@
+# Local machine, editor, and Python build state
+.driver-cache/
+.doc-review/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.vs/
+.idea/
+*.vcxproj.user
+
+# Local configuration and generated experiment material
+.env
+.env.*
+config.local.json
+configs/*.local.json
+!config.example.json
+!configs/**/*.example.json
+runs/
+experiments/
+*.dmp
+# Raw local validation output records temporary virtual-environment and machine paths.
+# Keep the reviewed Markdown summary, but do not make these logs prospective uploads.
+docs/validation/logs/
+
+# UE/AirSim runtime output and large local resource distributions
+材料-无人机遥感实习-AirSIM部分/
+**/Saved/Logs/
+**/Saved/Crashes/
+**/WindowsNoEditor.zip
+**/*.pak
+**/*.exe
+
+# Local handoff history contains machine paths and shared-environment details.
+# Redact and archive an explicitly reviewed copy before considering publication.
+GPT账号迁移交接说明.md

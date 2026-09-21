@@ -1,0 +1,10 @@
+{
+  "scenario": "backend_failure",
+  "task_spec": {"schema": "drone.platform.contract/v0.1", "task_id": "reach-fixture", "task_type": "reach_point", "time_budget_s": 10.0, "home_position_ned": {"north_m": 100.0, "east_m": -20.0, "down_m": 8.0}, "altitude_reference": "relative_to_home"},
+  "backend_config": {"backend_type": "mock", "vehicle_id": "drone-1"},
+  "observation_before": {"schema": "drone.platform.contract/v0.1", "sequence": 0, "vehicle_id": "drone-1", "position_ned": {"north_m": 100.0, "east_m": -20.0, "down_m": 8.0}, "velocity_ned_mps": [0, 0, 0], "wall_time_ns": 1},
+  "action": {"schema": "drone.platform.contract/v0.1", "action_id": "a-2", "kind": "move_to", "vehicle_id": "drone-1", "deadline_s": 5.0, "target_position_ned": {"north_m": 105.0, "east_m": -20.0, "down_m": 6.0}},
+  "execution": {"action_id": "a-2", "accepted": true, "completed": true, "succeeded": false, "wall_time_ns": 2, "error": {"code": "backend_error", "message": "scripted fixture failure", "retryable": false}},
+  "observation_after": {"schema": "drone.platform.contract/v0.1", "sequence": 1, "vehicle_id": "drone-1", "position_ned": {"north_m": 100.0, "east_m": -20.0, "down_m": 8.0}, "velocity_ned_mps": [0, 0, 0], "wall_time_ns": 3},
+  "episode_result": {"schema": "drone.platform.contract/v0.1", "episode_id": "failure-1", "task_id": "reach-fixture", "termination_reason": "backend_error", "success": false, "final_observation": {"schema": "drone.platform.contract/v0.1", "sequence": 1, "vehicle_id": "drone-1", "position_ned": {"north_m": 100.0, "east_m": -20.0, "down_m": 8.0}, "velocity_ned_mps": [0, 0, 0], "wall_time_ns": 3}, "cleanup": {"attempted": true, "succeeded": true, "error": null}, "metrics": {}, "record_path": "result.json"}
+}

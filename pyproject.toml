@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drone-platform"
+version = "0.1.0"
+description = "Simulator-independent contracts and no-simulator development tools for drone tasks"
+readme = "README.md"
+# P0 was validated with CPython 3.13.5.  Broader interpreter support needs
+# its own clean-environment evidence before this bound is relaxed.
+requires-python = ">=3.13,<3.14"
+dependencies = []
+
+[project.optional-dependencies]
+dev = []
+legacy-airsim = ["msgpack==1.1.1"]
+
+[tool.setuptools]
+packages = ["agents", "backends", "backends.mock", "contracts", "evaluators", "simulator_contract", "tasks"]

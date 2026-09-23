@@ -1,0 +1,45 @@
+{
+  "backend_config": {
+    "backend_type": "mock",
+    "vehicle_id": "Drone",
+    "connection": {},
+    "resource_root": null
+  },
+  "task_spec": {
+    "schema": "drone.platform.contract/v0.1",
+    "task_id": "reachpoint-mock-route-comparison",
+    "task_type": "reach_point",
+    "time_budget_s": 10.0,
+    "home_position_ned": {
+      "north_m": 0.0,
+      "east_m": 0.0,
+      "down_m": 0.0
+    },
+    "altitude_reference": "relative_to_home",
+    "parameters": {
+      "target_position_ned": {
+        "north_m": 5.0,
+        "east_m": 0.0,
+        "down_m": -2.0
+      },
+      "tolerance_m": 0.5,
+      "require_hover_confirmation": true,
+      "max_arrival_speed_mps": 0.1,
+      "action_deadline_s": 5.0,
+      "waypoint_tolerance_m": 0.5,
+      "intermediate_waypoints_ned": [
+        {"north_m": 2.0, "east_m": 0.0, "down_m": -2.0},
+        {"north_m": 4.0, "east_m": 0.0, "down_m": -2.0}
+      ],
+      "waypoints_ned": [
+        {"north_m": 0.0, "east_m": 4.0, "down_m": -2.0},
+        {"north_m": 5.0, "east_m": 0.0, "down_m": -2.0}
+      ]
+    },
+    "initial_state": {},
+    "seed": 0
+  },
+  "agents": ["direct", "fixed-route", "legacy-route"],
+  "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+  "repeats": 1
+}

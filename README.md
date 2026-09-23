@@ -27,6 +27,8 @@ Run one no-simulator ReachPoint episode with `drone-run --config config.example.
 
 `drone-experiment --config experiment.example.json --output experiments` runs the same Mock task with three Agent configurations across 20 seed values. The generic `ExperimentManager` records every attempted episode, aggregates success and numeric metrics, and writes `config.json`, `summary.json`, `metrics.csv` and `report.md`. The CLI uses Mock Agent/Task/Evaluator stand-ins; the platform manager itself depends only on the shared interfaces. `drone-replay <episode-directory>` rereads and validates saved trajectory, events, result and sensor references without sending flight commands.
 
+For a batch using the merged ReachPoint Task/Evaluator and three Agent implementations, run `drone-experiment --config reachpoint.experiment.example.json --output experiments/reachpoint-local`. This is a Mock route and recorder comparison; see [the ReachPoint batch report](docs/validation/Track-A-ReachPoint-Mock批量实验报告.md) for the 60-episode result and limits.
+
 MockBackend has no scene randomization. The seed is passed through `TaskSpec`; repeated seed values are comparable inputs, not evidence of independent random scenes. Real benchmarking still requires P3 validation and F11 comparison rules.
 
 To inspect a built distribution, build a wheel with pip and run

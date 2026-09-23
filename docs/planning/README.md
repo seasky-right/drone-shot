@@ -21,8 +21,9 @@
 ## 当前结论与证据范围
 
 - 三 track 分工继续以已实现的 [G0 决策](../decisions/2026-09-20-g0-platform-contract-v0.1.md) 和代码为共同接口；真人 track 确认仍未发生。
-- P0/P1 的本地验收记录见 [P0-P1 报告](../validation/P0-P1验收报告.md)。2026-09-23，P2 A/B/C 代码及跨线 Mock ReachPoint 集成已完成，当时平台测试 39 项、底层适配测试 9 项通过；wheel 范围及独立安装后的 CLI 运行通过。细节见 [P2 实现验收报告](../validation/P2实现验收报告.md)。Track A 又独立推进至 V0.3 Mock 验收：批量实验、统计报告和记录重读已完成，当前平台测试 42 项、底层测试 9 项通过，3 Agent × 20 seeds 的 60 次 Mock episode 在独立 wheel 安装中跑通；见 [Track A V0.3 Mock 报告](../validation/Track-A-V0.3-Mock验收报告.md)。
-- 2026-09-23 已获取 `origin/agent` 的提交 `9563c4d`，在本地集成分支接入其直达、固定航线和搜索导航 Agent 及基础 ReachPointTask。提交内容属于 Agent/Task，不含新的 AirSim Backend；两种新 ReachPoint Agent 已通过 Mock CLI/Runner/Recorder 集成验证，搜索任务闭环仍待 P4。见 [Agent 分支合并验收报告](../validation/Agent分支合并验收报告.md)。
+- P0/P1 的本地验收记录见 [P0-P1 报告](../validation/P0-P1验收报告.md)。2026-09-23，P2 A/B/C 代码及跨线 Mock ReachPoint 集成已完成，当时平台测试 39 项、底层适配测试 9 项通过；wheel 范围及独立安装后的 CLI 运行通过。细节见 [P2 实现验收报告](../validation/P2实现验收报告.md)。Track A 又独立推进至 V0.3 Mock 验收：批量实验、统计报告和记录重读已完成，当时平台测试 42 项、底层测试 9 项通过，3 Agent × 20 seeds 的 60 次 Mock episode 在独立 wheel 安装中跑通；见 [Track A V0.3 Mock 报告](../validation/Track-A-V0.3-Mock验收报告.md)。
+- 2026-09-23 已获取 `origin/agent` 的提交 `9563c4d`，经集成分支接入并合入 main 的直达、固定航线和搜索导航 Agent 及基础 ReachPointTask。提交内容属于 Agent/Task，不含新的 AirSim Backend；两种新 ReachPoint Agent 已通过 Mock CLI/Runner/Recorder 集成验证，搜索任务闭环仍待 P4。见 [Agent 分支合并验收报告](../validation/Agent分支合并验收报告.md)。
+- Track A 与 C 的正式 ReachPoint 消费者已完成 3 Agent × 20 seed 共 60 次 Mock 批量实验：均成功、均可重读，当前 `python -m pytest tests` 126 项通过（含底层适配测试 8 项）；见 [ReachPoint Mock 批量实验报告](../validation/Track-A-ReachPoint-Mock批量实验报告.md)。这不构成随机场景或真实 Benchmark 证据。
 - B 已提供独立 AirSimBackend smoke 入口，但本轮未启动真实仿真器。真实飞行、传感器和安全收尾是 P3 的独立验收，不以 FakeRpc 测试替代。
 - 冻结基线当前校验未通过：manifest 中的 `PythonClient/.pytest_cache/` 六个缓存文件在本机缺失，其余 1,383 项内容匹配。报告记录了只读差异；不要为消除提示而运行 baseline writer。
 - 本地 Git 仓库已存在；P2、Track A 与 Agent 分支集成已整理为可审查提交；上传范围与状态以 Git 历史和合并记录为准。

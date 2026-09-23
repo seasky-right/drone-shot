@@ -1,0 +1,21 @@
+{
+  "schema": "drone.benchmark.pack/v0.1",
+  "benchmark_id": "reach_point_v0_1",
+  "task_type": "reach_point",
+  "evaluator_version": "reach_point/v0.1",
+  "scoring_policy_version": "reach_point_scoring/v0.1",
+  "case_files": ["cases/basic.json"],
+  "seeds_file": "seeds.json",
+  "baseline_manifest": "baseline_manifest.json",
+  "scoring_policy": "scoring_policy.json",
+  "repeats_per_agent": 5,
+  "limits": {
+    "max_steps": 100,
+    "action_frequency_hz": 2,
+    "wall_time_budget_s": 15
+  },
+  "retry_policy": {
+    "infrastructure_retries": 1,
+    "algorithm_failure_retries": 0
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "drone.platform.contract/v0.1",
+  "task_id": "reach-basic",
+  "task_type": "reach_point",
+  "time_budget_s": 10,
+  "home_position_ned": {"north_m": 0, "east_m": 0, "down_m": 0},
+  "altitude_reference": "relative_to_home",
+  "parameters": {
+    "target_position_ned": {"north_m": 10, "east_m": 0, "down_m": 0},
+    "tolerance_m": 0.5,
+    "require_return_home": false,
+    "require_landing": false,
+    "collision_policy": "zero"
+  },
+  "initial_state": {},
+  "seed": 101
+}

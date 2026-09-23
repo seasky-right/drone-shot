@@ -1,7 +1,7 @@
 # Drone spatial-intelligence platform
 
 This repository is preparing a simulator-independent platform for drone tasks.
-The present, runnable scope is a versioned platform contract, a small no-simulator MockBackend, shared episode fixtures, and the preserved legacy AirSim adapter. It is **not** yet a real AirSimBackend, EpisodeRunner, search task, benchmark suite, or a verified flight loop.
+The present, runnable scope is a versioned platform contract, a small no-simulator MockBackend, shared episode fixtures, a ReachPoint task/evaluator, three baseline agents, a validated ReachPoint Benchmark Pack, and the preserved legacy AirSim adapter. It is **not** yet a real AirSimBackend, EpisodeRunner, automated Experiment Manager, search task, or a verified flight loop. See [ReachPoint C1 rules and fixtures](fixtures/reach_point/README.md).
 
 Read [the current route](综述.md) first, then the [planning index](docs/planning/README.md). The former old overview is archived under `docs/archive/` and is not a delivery baseline.
 
@@ -37,3 +37,9 @@ The UE4/AirSim course material and `airsim-settings/drone.json` are frozen local
 The distributable package explicitly contains only the small Python packages listed in `pyproject.toml`. Large scenes, drivers, generated runs, and course resources are local references, not ordinary-source uploads. See [the upload checklist](docs/planning/GitHub上传前仓库整理清单.md) and [resource manifest](assets/manifests/legacy-ue4-airsim.md).
 
 The private collaboration baseline is authorized for `seasky-right/drone-shot`; collaborators remain to be specified. Project licence and external-resource distribution rights remain unresolved. This repository does not publish external resources.
+
+## Offline ReachPoint evaluation
+
+The local evaluator can score versioned episode JSON records and compare same-condition runs without a simulator. It writes `result.json`, `summary.json`, and a Markdown comparison report. See the [local evaluation guide](docs/evaluation/本地评价使用说明.md). The included trajectories are synthetic fixtures, not autonomous agents or AirSim flights.
+
+Validate the versioned ReachPoint pack with `python -B scripts/validate_reach_point_pack.py`. The pack plans one case × three baselines × five repeats; running those 15 episodes still requires the future Runner/Experiment Manager.

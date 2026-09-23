@@ -1,0 +1,11 @@
+{
+  "schema": "drone.benchmark.scoring/v0.1",
+  "version": "reach_point_scoring/v0.1",
+  "goal_points": 70,
+  "time_points": 30,
+  "time_formula": "30 * max(0, 1 - completion_time_s / time_budget_s)",
+  "unsuccessful_total": 0,
+  "safety_failure_total": 0,
+  "collision_policy_source": "task_spec.parameters.collision_policy",
+  "path_length_in_total": false
+}

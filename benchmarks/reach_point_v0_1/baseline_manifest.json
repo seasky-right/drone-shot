@@ -1,0 +1,8 @@
+{
+  "schema": "drone.benchmark.baselines/v0.1",
+  "agents": [
+    {"agent_id": "random", "class": "agents.reach_point:RandomAgent", "parameters": {"radius_m": 2, "deadline_s": 5}},
+    {"agent_id": "fixed_route", "class": "agents.reach_point:FixedRouteAgent", "parameters": {"route": [{"north_m": 5, "east_m": 0, "down_m": 0}, {"north_m": 10, "east_m": 0, "down_m": 0}], "deadline_s": 5}},
+    {"agent_id": "rule_based", "class": "agents.reach_point:RuleBasedAgent", "parameters": {"deadline_s": 5}}
+  ]
+}

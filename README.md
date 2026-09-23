@@ -45,3 +45,9 @@ The UE4/AirSim course material and `airsim-settings/drone.json` are frozen local
 The distributable package explicitly contains only the small Python packages listed in `pyproject.toml`. Large scenes, drivers, generated runs, and course resources are local references, not ordinary-source uploads. See [the upload checklist](docs/planning/GitHub上传前仓库整理清单.md) and [resource manifest](assets/manifests/legacy-ue4-airsim.md).
 
 The private collaboration baseline is authorized for `seasky-right/drone-shot`; collaborators remain to be specified. Project licence and external-resource distribution rights remain unresolved. This repository does not publish external resources.
+
+## Offline ReachPoint evaluation
+
+The local evaluator scores versioned episode JSON records and compares runs made under the same conditions without requiring a simulator. It writes `result.json`, `summary.json`, and a Markdown comparison report. See the [local evaluation guide](docs/evaluation/本地评价使用说明.md). The included trajectories are synthetic fixtures rather than AirSim flight results.
+
+Validate the versioned ReachPoint pack with `python -B scripts/validate_reach_point_pack.py`. The pack defines one case, three baselines, and five repeats. An adapter from this pack manifest to the current `ExperimentManager`, plus trusted elapsed-time and event recording, is still required before the planned 15 benchmark episodes can be treated as an official result.

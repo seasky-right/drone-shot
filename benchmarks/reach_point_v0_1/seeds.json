@@ -1,0 +1,4 @@
+{
+  "schema": "drone.benchmark.seeds/v0.1",
+  "seeds": [101, 102, 103, 104, 105]
+}

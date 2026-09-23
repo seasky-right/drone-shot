@@ -1,0 +1,28 @@
+{
+  "schema": "reach_point_c1_fixture/v0.1",
+  "base_task": {
+    "schema": "drone.platform.contract/v0.1",
+    "task_id": "reach-c1",
+    "task_type": "reach_point",
+    "time_budget_s": 10,
+    "home_position_ned": {"north_m": 0, "east_m": 0, "down_m": 0},
+    "altitude_reference": "relative_to_home",
+    "parameters": {
+      "target_position_ned": {"north_m": 10, "east_m": 0, "down_m": 0},
+      "tolerance_m": 0.5,
+      "require_return_home": false,
+      "require_landing": false,
+      "collision_policy": "zero"
+    }
+  },
+  "cases": [
+    {"name": "success", "positions_north_m": [0, 5, 10], "step_elapsed_s": [2, 4], "termination_reason": "success", "events": [], "expected": {"goal_reached": true, "final_distance_m": 0, "min_distance_m": 0, "completion_time_s": 4, "path_length_m": 10, "collision_count": 0, "goal_score": 70, "time_score": 18, "score": 88, "rank_eligible": true, "safety_status": "passed"}},
+    {"name": "tolerance_boundary", "positions_north_m": [0, 9.5], "step_elapsed_s": [5], "termination_reason": "success", "events": [], "expected": {"goal_reached": true, "final_distance_m": 0.5, "min_distance_m": 0.5, "completion_time_s": 5, "path_length_m": 9.5, "collision_count": 0, "goal_score": 70, "time_score": 15, "score": 85, "rank_eligible": true, "safety_status": "passed"}},
+    {"name": "not_reached", "positions_north_m": [0, 8], "step_elapsed_s": [3], "termination_reason": "task_failed", "events": [], "expected": {"goal_reached": false, "final_distance_m": 2, "min_distance_m": 2, "completion_time_s": null, "path_length_m": 8, "collision_count": 0, "goal_score": 0, "time_score": 0, "score": 0, "rank_eligible": false, "safety_status": "passed"}},
+    {"name": "timeout", "positions_north_m": [0, 8], "step_elapsed_s": [10], "termination_reason": "timeout", "events": [], "expected": {"goal_reached": false, "final_distance_m": 2, "min_distance_m": 2, "completion_time_s": null, "path_length_m": 8, "collision_count": 0, "goal_score": 0, "time_score": 0, "score": 0, "rank_eligible": false, "safety_status": "passed"}},
+    {"name": "backend_failure", "positions_north_m": [0, 0], "step_elapsed_s": [1], "termination_reason": "backend_error", "execution_succeeded": false, "events": [], "expected": {"goal_reached": false, "final_distance_m": 10, "min_distance_m": 10, "completion_time_s": null, "path_length_m": 0, "collision_count": 0, "goal_score": 0, "time_score": 0, "score": 0, "rank_eligible": false, "safety_status": "passed"}},
+    {"name": "collision", "positions_north_m": [0, 10], "step_elapsed_s": [2], "termination_reason": "success", "events": ["collision"], "expected": {"goal_reached": true, "final_distance_m": 0, "min_distance_m": 0, "completion_time_s": 2, "path_length_m": 10, "collision_count": 1, "goal_score": 70, "time_score": 24, "score": 0, "rank_eligible": true, "safety_status": "failed"}},
+    {"name": "return_home_failure", "positions_north_m": [0, 10], "step_elapsed_s": [2], "termination_reason": "success", "require_return_home": true, "events": [], "expected": {"goal_reached": true, "final_distance_m": 0, "min_distance_m": 0, "completion_time_s": 2, "path_length_m": 10, "collision_count": 0, "goal_score": 70, "time_score": 24, "score": 0, "rank_eligible": false, "safety_status": "failed"}},
+    {"name": "landing_failure", "positions_north_m": [0, 10], "step_elapsed_s": [2], "termination_reason": "success", "require_landing": true, "events": [], "expected": {"goal_reached": true, "final_distance_m": 0, "min_distance_m": 0, "completion_time_s": 2, "path_length_m": 10, "collision_count": 0, "goal_score": 70, "time_score": 24, "score": 0, "rank_eligible": false, "safety_status": "failed"}}
+  ]
+}

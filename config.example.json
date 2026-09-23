@@ -21,7 +21,11 @@
         "north_m": 5.0,
         "east_m": 0.0,
         "down_m": -2.0
-      }
+      },
+      "tolerance_m": 0.5,
+      "require_return_home": false,
+      "require_landing": false,
+      "collision_policy": "zero"
     },
     "initial_state": {},
     "seed": 0

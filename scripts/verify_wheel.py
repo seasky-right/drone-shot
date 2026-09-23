@@ -19,6 +19,7 @@ PACKAGES = frozenset(
         "agents",
         "backends",
         "contracts",
+        "core",
         "evaluators",
         "simulator_contract",
         "tasks",
@@ -28,8 +29,10 @@ PACKAGE_MARKERS = frozenset(
     {
         "agents/__init__.py",
         "backends/__init__.py",
+        "backends/airsim/__init__.py",
         "backends/mock/__init__.py",
         "contracts/__init__.py",
+        "core/__init__.py",
         "evaluators/__init__.py",
         "simulator_contract/__init__.py",
         "tasks/__init__.py",

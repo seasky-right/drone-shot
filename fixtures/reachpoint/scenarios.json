@@ -1,0 +1,13 @@
+{
+  "home_ned": {"north_m": 100.0, "east_m": -20.0, "down_m": 8.0},
+  "target_ned": {"north_m": 105.0, "east_m": -20.0, "down_m": 6.0},
+  "tolerance_m": 0.5,
+  "cases": [
+    {"name": "success", "after_ned": {"north_m": 105.0, "east_m": -20.0, "down_m": 6.0}, "execution_succeeded": true, "expected_done": true, "expected_success": true, "expected_reason": "success", "cleanup_succeeded": true},
+    {"name": "not_reached", "after_ned": {"north_m": 104.0, "east_m": -20.0, "down_m": 6.0}, "execution_succeeded": true, "expected_done": false, "expected_success": false, "expected_reason": null, "cleanup_succeeded": true},
+    {"name": "backend_failure", "after_ned": {"north_m": 100.0, "east_m": -20.0, "down_m": 8.0}, "execution_succeeded": false, "expected_done": true, "expected_success": false, "expected_reason": "backend_error", "cleanup_succeeded": true},
+    {"name": "return_failure", "after_ned": {"north_m": 105.0, "east_m": -20.0, "down_m": 6.0}, "execution_succeeded": true, "expected_done": true, "expected_success": true, "expected_reason": "success", "cleanup_succeeded": false, "cleanup_error": "return_home_failed"},
+    {"name": "landing_failure", "after_ned": {"north_m": 105.0, "east_m": -20.0, "down_m": 6.0}, "execution_succeeded": true, "expected_done": true, "expected_success": true, "expected_reason": "success", "cleanup_succeeded": false, "cleanup_error": "landing_failed"}
+  ],
+  "timeout": {"elapsed_s": 10.0, "termination_reason": "timeout", "cleanup_succeeded": true}
+}

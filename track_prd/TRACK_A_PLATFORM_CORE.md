@@ -1,6 +1,8 @@
 # Track A — Platform Core
 
-> 适用说明（2026-09-20）：本 PRD 保留职责与目标描述；与当前实现不符时，以仓库代码和验证记录为准，不将计划视为已实现。整体路线以 [综述.md](../综述.md) 为基准，近期执行以 [近期开发执行计划](../docs/planning/近期开发执行计划.md) 为准。当前 `simulator_contract/` 是已有底层仿真协议，本文 `contracts/` 是待实现的平台协议；两层衔接尚未冻结。近期计划将首次真实合流调整为 ReachPoint，并由 C 在该合流前提供最小 Evaluator；原文 SearchTarget 合流作为后续目标。
+> 适用说明（2026-09-20）：本 PRD 保留职责与目标描述；与当前实现不符时，以仓库代码和验证记录为准，不将计划视为已实现。整体路线以 [综述.md](../综述.md) 为基准，近期执行以 [近期开发执行计划](../docs/planning/近期开发执行计划.md) 为准。当前 `simulator_contract/` 是底层仿真协议，`contracts/` 平台 v0.1 协议已实现；两层通过 Backend 适配，真实闭环仍待验收。近期计划将首次真实合流调整为 ReachPoint，并由 C 在该合流前提供最小 Evaluator；原文 SearchTarget 合流作为后续目标。
+
+> 进度快照（2026-09-23）：V0.1 公共协议与 Mock、V0.2 Mock episode、V0.3 Mock 批量实验（3 Agent × 1 Task × 20 seeds）已有本地验收。真实 AirSim episode 与正式 Benchmark 尚未验收；以 [Track A V0.3 Mock 报告](../docs/validation/Track-A-V0.3-Mock验收报告.md) 及 [近期开发执行计划](../docs/planning/近期开发执行计划.md) 为准。
 
 > 负责人：主线开发  
 > 目标：实现与具体仿真器、具体任务解耦的平台运行内核，并负责后续三条开发线的总体集成。

@@ -130,9 +130,27 @@ class AirSimLegacyAdapter:
             ),
             armed=None,
             api_control=None,
-            landed=_optional_int(state.get("landed_state")) == 0,
+            landed=(None if state.get("landed_state") is None else _optional_int(state.get("landed_state")) == 0),
         )
 
+    def reset_vehicle(self) -> CommandResult:
+        """AirSim reset is simulator-wide and accepts no vehicle argument."""
+        try:
+            response = self._call("reset")
+            if response is False:
+                return self._failure("reset", ErrorCode.SIMULATOR, "AirSim reset returned false")
+            self._confirmed_sensors.clear()
+            return self._result("reset", True, True)
+        except (OSError, AirSimAdapterError) as error:
+            return self._failure_from_exception("reset", error, ErrorCode.TRANSPORT, True)
+
+    def move_to_z(self, vehicle_id: str, down_m: float, speed_mps: float, timeout_s: float) -> CommandResult:
+        """Legacy near-ground landing fallback; caller verifies the final state."""
+        return self._command(
+            "moveToZ", vehicle_id, down_m, speed_mps, timeout_s,
+            {"is_rate": True, "yaw_or_rate": 0.0}, -1.0, 1.0,
+            timeout_s=timeout_s + 5.0,
+        )
     def set_api_control(self, vehicle_id: str, enabled: bool) -> CommandResult:
         return self._command("enableApiControl", vehicle_id, enabled)
 
@@ -155,6 +173,7 @@ class AirSimLegacyAdapter:
         right_mps: float,
         down_mps: float,
         duration_s: float,
+        rpc_timeout_s: float | None = None,
     ) -> CommandResult:
         yaw_mode = {"is_rate": True, "yaw_or_rate": 0.0}
         return self._command(
@@ -166,7 +185,7 @@ class AirSimLegacyAdapter:
             duration_s,
             0,
             yaw_mode,
-            timeout_s=max(duration_s + 2.0, 3.0),
+            timeout_s=rpc_timeout_s if rpc_timeout_s is not None else max(duration_s + 2.0, 3.0),
         )
 
     def observe(self, vehicle_id: str, request: SensorRequest) -> Observation:
@@ -213,7 +232,9 @@ class AirSimLegacyAdapter:
         self, method: str, vehicle_id: str, *args: object, timeout_s: float = 5.0
     ) -> CommandResult:
         try:
-            self._call(method, *args, vehicle_id, timeout_s=timeout_s)
+            response = self._call(method, *args, vehicle_id, timeout_s=timeout_s)
+            if response is False:
+                return self._failure(method, ErrorCode.SIMULATOR, f"{method} returned false")
             return self._result(method, True, True)
         except (OSError, AirSimAdapterError) as error:
             return self._failure_from_exception(method, error, ErrorCode.TRANSPORT, True)

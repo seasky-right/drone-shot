@@ -16,5 +16,10 @@ dependencies = []
 dev = []
 legacy-airsim = ["msgpack==1.1.1"]
 
+[project.scripts]
+drone-run = "core.cli:main"
+drone-experiment = "core.experiment_cli:main"
+drone-replay = "core.replay:main"
+
 [tool.setuptools]
-packages = ["agents", "backends", "backends.mock", "contracts", "evaluators", "simulator_contract", "tasks"]
+packages = ["agents", "backends", "backends.airsim", "backends.mock", "contracts", "core", "evaluators", "simulator_contract", "tasks"]

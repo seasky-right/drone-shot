@@ -1,0 +1,58 @@
+{
+  "backend_config": {
+    "backend_type": "mock",
+    "vehicle_id": "Drone",
+    "connection": {},
+    "resource_root": null
+  },
+  "task_spec": {
+    "schema": "drone.platform.contract/v0.1",
+    "task_id": "mock-one-step-comparison",
+    "task_type": "mock_one_step_position",
+    "time_budget_s": 5.0,
+    "home_position_ned": {
+      "north_m": 0.0,
+      "east_m": 0.0,
+      "down_m": 0.0
+    },
+    "altitude_reference": "relative_to_home",
+    "parameters": {
+      "target_position_ned": {
+        "north_m": 5.0,
+        "east_m": 0.0,
+        "down_m": -2.0
+      },
+      "tolerance_m": 0.5
+    },
+    "initial_state": {},
+    "seed": 0
+  },
+  "agents": [
+    "fixed",
+    "hover",
+    "offset"
+  ],
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "repeats": 1
+}

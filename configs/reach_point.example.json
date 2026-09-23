@@ -1,0 +1,31 @@
+{
+  "backend_config": {
+    "backend_type": "mock",
+    "vehicle_id": "drone-1",
+    "connection": {},
+    "resource_root": null
+  },
+  "task_spec": {
+    "schema": "drone.platform.contract/v0.1",
+    "task_id": "reach-point-001",
+    "task_type": "reach_point",
+    "time_budget_s": 30.0,
+    "home_position_ned": {
+      "north_m": 10.0,
+      "east_m": -20.0,
+      "down_m": 5.0
+    },
+    "altitude_reference": "relative_to_home",
+    "parameters": {
+      "target_position_ned": {
+        "north_m": 25.0,
+        "east_m": -10.0,
+        "down_m": -8.0
+      },
+      "tolerance_m": 0.5,
+      "action_deadline_s": 5.0
+    },
+    "initial_state": {},
+    "seed": 42
+  }
+}

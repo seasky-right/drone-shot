@@ -19,6 +19,6 @@ python -B -m unittest discover -s tests -v
 
 结果：21 项通过。此前 P1 为 15 项，本次新增 6 项。`git diff --check` 通过。测试全部无仿真；本机未发现 Python 3.13 解释器，因此尚未在仓库声明的 Python 3.13 环境复验。
 
-## 尚待合流
+## 合流状态更新（2026-09-23）
 
-C1 未接入实际 EpisodeRunner / Recorder，因为仓库当前没有这两个正式实现。`evaluate_episode` 中的 `step_elapsed_s` 必须由 Runner 的单调时钟提供；完整安全事件只有在 Runtime 证实采集能力后才能传空列表。C2 需要冻结事件来源与时序、扩展 Evaluator 调用契约、序列化 result.json。真实 AirSim 成功/失败样例属于 C4，不能由本次 Mock/fixture 验证替代。
+最新 `main` 的 EpisodeRunner、Recorder 与 ExperimentManager 已合入本分支，并与评价代码共同通过测试。离线评价器使用的丰富 episode 记录尚未由 Recorder 直接生成：仍需适配 `elapsed_monotonic_s`、完整事件来源及 cleanup 字段后，才能把运行结果交给 `evaluate_episode`。完整安全事件只有在 Runtime 证实采集能力后才能传空列表。真实 AirSim 成功/失败样例属于 C4，不能由本次 Mock/fixture 验证替代。

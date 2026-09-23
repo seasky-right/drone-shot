@@ -1,0 +1,34 @@
+{
+  "backend_config": {
+    "backend_type": "mock",
+    "vehicle_id": "drone-1",
+    "connection": {},
+    "resource_root": null
+  },
+  "task_spec": {
+    "schema": "drone.platform.contract/v0.1",
+    "task_id": "lawnmower-search-example-001",
+    "task_type": "search_target",
+    "time_budget_s": 60.0,
+    "home_position_ned": {
+      "north_m": 10.0,
+      "east_m": -20.0,
+      "down_m": 5.0
+    },
+    "altitude_reference": "relative_to_home",
+    "parameters": {
+      "search_area_ned": {
+        "min_north_m": 0.0,
+        "max_north_m": 40.0,
+        "min_east_m": -20.0,
+        "max_east_m": 20.0,
+        "flight_down_m": -8.0
+      },
+      "lane_spacing_m": 10.0,
+      "waypoint_tolerance_m": 0.75,
+      "action_deadline_s": 5.0
+    },
+    "initial_state": {},
+    "seed": 42
+  }
+}

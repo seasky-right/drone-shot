@@ -131,4 +131,3 @@ class DirectPointAgent:
         self._target_position_ned = None
         self._vehicle_id = None
         self._action_count = 0
-

@@ -118,4 +118,3 @@ class ReachPointTask:
         """Release episode state."""
         self._target_position_ned = None
         self._vehicle_id = None
-

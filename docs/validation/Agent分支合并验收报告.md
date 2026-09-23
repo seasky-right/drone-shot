@@ -13,4 +13,4 @@
 
 - 分支合入后平台测试 `110/110`、底层适配测试 `9/9` 通过；新增集成测试覆盖新 Agent 的 CLI/Recorder 路径、分支 ReachPointTask 的 Runner 路径。依赖锁校验和 wheel 范围检查通过；独立安装 wheel 后，`direct` 与 `fixed-route` 两个命令入口均运行成功，新增模块从 `site-packages` 导入。
 - 合流仍是无仿真 Mock 验证。没有启动真实 AirSim；P3 真实 ReachPoint 与 P4 SearchTarget 不能据此标为已验收。
-- 未改写冻结课程材料、`airsim-settings/drone.json` 或基线 manifest；未推送本地集成分支。远端分支可继续由原作者独立开发。
+- 未改写冻结课程材料、`airsim-settings/drone.json` 或基线 manifest；本报告记录本地集成验收；远端合并状态以 Git 历史为准。

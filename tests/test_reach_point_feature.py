@@ -532,5 +532,3 @@ class ReachPointFeatureTests(unittest.TestCase):
 
         with self.assertRaises(ContractValidationError):
             task.update(step)
-
-

@@ -25,7 +25,7 @@
 - 2026-09-23 已获取 `origin/agent` 的提交 `9563c4d`，在本地集成分支接入其直达、固定航线和搜索导航 Agent 及基础 ReachPointTask。提交内容属于 Agent/Task，不含新的 AirSim Backend；两种新 ReachPoint Agent 已通过 Mock CLI/Runner/Recorder 集成验证，搜索任务闭环仍待 P4。见 [Agent 分支合并验收报告](../validation/Agent分支合并验收报告.md)。
 - B 已提供独立 AirSimBackend smoke 入口，但本轮未启动真实仿真器。真实飞行、传感器和安全收尾是 P3 的独立验收，不以 FakeRpc 测试替代。
 - 冻结基线当前校验未通过：manifest 中的 `PythonClient/.pytest_cache/` 六个缓存文件在本机缺失，其余 1,383 项内容匹配。报告记录了只读差异；不要为消除提示而运行 baseline writer。
-- 本地 Git 仓库已存在；P2、Track A 与 Agent 分支集成保留在本地集成分支，尚未上传。后续任何上传仍须先审查实际文件集合。
+- 本地 Git 仓库已存在；P2、Track A 与 Agent 分支集成已整理为可审查提交；上传范围与状态以 Git 历史和合并记录为准。
 
 ## 状态维护规则
 

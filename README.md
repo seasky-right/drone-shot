@@ -3,7 +3,7 @@
 This repository is preparing a simulator-independent platform for drone tasks.
 The current Plugin Contract v0.2 candidate has a Core/Contracts wheel, a separate first-party component Pack, static plugin discovery/preflight, and a two-vehicle Mock execution path. The earlier single-vehicle ReachPoint and AirSim routes remain available through explicit adapters. One real UE4 AirSim ReachPoint success and one controlled failure have been recorded and replayed; P3 formal acceptance and a real-simulator benchmark remain later work. See the [plugin developer guide](docs/plugins/README.md) for the new API and its limits.
 
-Read [the current route](综述.md) first, then the [planning index](docs/planning/README.md). The former old overview is archived under `docs/archive/` and is not a delivery baseline.
+Read [the current route](综述.md) first, then the [planning index](docs/planning/README.md) and [current status report](docs/validation/项目现状报告-2026-09-25.md). The former old overview is archived under `docs/archive/` and is not a delivery baseline.
 
 ## Install and test without a simulator
 

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drone-single-agent-sample"
+version = "0.1.0"
+description = "One-component plugin composed with the builtin v0.2 Mock pack"
+requires-python = ">=3.13,<3.14"
+dependencies = ["drone-platform==0.1.0"]
+
+[project.entry-points."drone.plugins.v02"]
+"sample.single" = "drone_single_agent:create_agent"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["drone_single_agent"]
+
+[tool.setuptools.package-data]
+drone_single_agent = ["drone_plugin.json"]

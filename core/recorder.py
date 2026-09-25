@@ -5,7 +5,12 @@ import json
 from pathlib import Path
 from typing import Any
 
-from contracts import BackendConfig, EpisodeEvent, EpisodeResult, StepRecord, TaskSpec
+from contracts import (
+    Action, BackendConfig, EpisodeEvent, EpisodeResult, EventSource,
+    ExecutionResult, PlatformObservation, StepRecord, TaskSpec,
+)
+
+from .store import EpisodeStore, StoreError
 
 
 def _write_json(path: Path, value: Any) -> None:
@@ -66,3 +71,55 @@ class Recorder:
         except OSError as exc:
             self.failed = True
             self.failure_message = f"{name}: {exc}"
+
+
+class RecorderStoreAdapter:
+    """Run the shared session state machine through an existing Recorder."""
+
+    def __init__(self, recorder: Recorder) -> None:
+        self.recorder = recorder
+        self.root = recorder.root.resolve()
+        self.directory: Path | None = None
+        self._artifacts = EpisodeStore(self.root)
+
+    @property
+    def failed(self) -> bool:
+        return self.recorder.failed or self._artifacts.failed
+
+    def start(self, episode_id: str, *, task: object, backend: object,
+              metadata: dict[str, object] | None = None) -> Path:
+        self.directory = self.recorder.start(
+            episode_id, TaskSpec.from_dict(task), BackendConfig.from_dict(backend), metadata)
+        self._artifacts.directory = self.directory
+        return self.directory
+
+    def append(self, name: str, value: dict[str, object]) -> None:
+        if name == "events.jsonl":
+            self.recorder.event(EpisodeEvent(
+                value["sequence"], EventSource(value["source"]), value["kind"],
+                value["wall_time_ns"], value["fields"]))
+        elif name == "trajectory.jsonl":
+            self.recorder.step(StepRecord(
+                value["sequence"],
+                PlatformObservation.from_dict(value["observation_before"]),
+                Action.from_dict(value["action"]),
+                ExecutionResult.from_dict(value["execution"]),
+                PlatformObservation.from_dict(value["observation_after"])))
+        else:
+            raise ValueError("append is limited to episode journals")
+
+    def write_bytes(self, relative_path: str, content: bytes) -> str:
+        try:
+            return self._artifacts.write_bytes(relative_path, content)
+        except StoreError as exc:
+            self.recorder.failed = True
+            self.recorder.failure_message = str(exc)
+            raise
+
+    def finish(self, result: dict[str, object]) -> Path:
+        if self._artifacts.failed:
+            self.recorder.failed = True
+            self.recorder.failure_message = self._artifacts.failure_message
+        self.recorder.finish(EpisodeResult.from_dict(result))
+        self._artifacts.finished = True
+        return self.directory / "result.json"

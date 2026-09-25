@@ -33,6 +33,7 @@ class ExperimentPlan:
     seeds: tuple[int, ...]
     repeats: int = 1
     experiment_id: str | None = None
+    components: Mapping[str, object] | None = None
 
     def __post_init__(self) -> None:
         if not self.agents or any(not isinstance(name, str) or not name.strip() for name in self.agents):
@@ -49,12 +50,14 @@ class ExperimentPlan:
             value = self.experiment_id
             if not _SAFE_ID.fullmatch(value) or value.endswith(".") or value.split(".")[0].lower() in _RESERVED_WINDOWS:
                 raise ValueError("experiment_id must be a safe directory name")
+        if self.components is not None and not isinstance(self.components, Mapping):
+            raise ValueError("components must be an object")
 
     @classmethod
     def from_dict(cls, value: Mapping[str, object]) -> "ExperimentPlan":
         if not isinstance(value, Mapping):
             raise ValueError("experiment plan must be an object")
-        allowed = {"task_spec", "backend_config", "agents", "seeds", "repeats", "experiment_id"}
+        allowed = {"task_spec", "backend_config", "agents", "seeds", "repeats", "experiment_id", "components"}
         if set(value) - allowed or not {"task_spec", "backend_config", "agents", "seeds"} <= set(value):
             raise ValueError("experiment plan has missing or unknown fields")
         agents, seeds = value["agents"], value["seeds"]
@@ -64,7 +67,7 @@ class ExperimentPlan:
             TaskSpec.from_dict(value["task_spec"]),
             BackendConfig.from_dict(value["backend_config"]),
             tuple(agents), tuple(seeds),
-            value.get("repeats", 1), value.get("experiment_id"),
+            value.get("repeats", 1), value.get("experiment_id"), value.get("components"),
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -75,6 +78,7 @@ class ExperimentPlan:
             "seeds": list(self.seeds),
             "repeats": self.repeats,
             "experiment_id": self.experiment_id,
+            "components": self.components,
         }
 
 
@@ -190,12 +194,14 @@ class ExperimentManager:
         task_factory: Callable[[], object],
         evaluator_factory: Callable[[], object],
         agent_factories: Mapping[str, Callable[[], object]],
+        recordable_components: Mapping[str, object] | None = None,
     ) -> None:
         self.root = Path(root)
         self.backend_factory = backend_factory
         self.task_factory = task_factory
         self.evaluator_factory = evaluator_factory
         self.agent_factories = dict(agent_factories)
+        self.recordable_components = recordable_components
 
     def run(self, plan: ExperimentPlan) -> ExperimentResult:
         unknown = set(plan.agents) - self.agent_factories.keys()
@@ -209,7 +215,13 @@ class ExperimentManager:
         (directory / "INCOMPLETE").write_text("experiment output is not complete\n", encoding="utf-8")
         episodes = directory / "episodes"
         episodes.mkdir()
-        _write_json(directory / "config.json", plan.to_dict())
+        recorded_plan = plan.to_dict()
+        recorded_plan["backend_config"] = {
+            **plan.backend_config.to_dict(), "connection": {},
+        }
+        # Direct Manager callers have no schema with which to redact plugin config.
+        recorded_plan["components"] = self.recordable_components
+        _write_json(directory / "config.json", recorded_plan)
         rows: list[dict[str, object]] = []
         stopped_early = False
         index = 0

@@ -1,0 +1,23 @@
+{
+  "id": "sample.external",
+  "version": "0.1.0",
+  "type": "pack",
+  "plugin_api": "drone.plugin.api/v0.2",
+  "entry_point": "drone_ext_sample:register",
+  "dependencies": [],
+  "capabilities": {},
+  "config_schema": {"type": "object", "additionalProperties": false},
+  "components": [
+    {"id": "sample.mock/backend", "type": "backend", "entry_point": "drone_ext_sample:create_backend", "capabilities": {"max_vehicles": 2, "action_kinds": ["sample/move"]}, "config_schema": {"type": "object", "additionalProperties": false}},
+    {"id": "sample.mock/runtime", "type": "runtime_provider", "entry_point": "drone_ext_sample:create_runtime", "capabilities": {}, "config_schema": {"type": "object", "additionalProperties": false}},
+    {"id": "sample.urban/scenario", "type": "scenario", "entry_point": "drone_ext_sample:create_scenario", "capabilities": {"scenario_id": "sample.urban"}, "config_schema": {"type": "object", "properties": {"seed": {"type": "integer", "minimum": 0}, "target_north_m": {"type": "number"}}, "additionalProperties": false}},
+    {"id": "sample.search/task", "type": "task", "entry_point": "drone_ext_sample:create_task", "capabilities": {}, "config_schema": {"type": "object", "additionalProperties": false}},
+    {"id": "sample.mapping/task", "type": "task", "entry_point": "drone_ext_sample:create_mapping_task", "capabilities": {}, "config_schema": {"type": "object", "additionalProperties": false}},
+    {"id": "sample.central/agent", "type": "agent", "entry_point": "drone_ext_sample:create_agent", "capabilities": {"action_kinds": ["sample/move"]}, "config_schema": {"type": "object", "properties": {"target_north_m": {"type": "number"}, "token": {"type": "string", "x-secret": true}}, "additionalProperties": false}},
+    {"id": "sample.search/evaluator", "type": "evaluator", "entry_point": "drone_ext_sample:create_evaluator", "capabilities": {}, "config_schema": {"type": "object", "additionalProperties": false}},
+    {"id": "sample.urban/generator", "type": "scenario_generator", "entry_point": "drone_ext_sample:create_scenario_generator", "capabilities": {"scenario_id": "sample.urban"}, "config_schema": {"type": "object", "additionalProperties": false}},
+    {"id": "sample.training/driver", "type": "training_driver", "entry_point": "drone_ext_sample:create_training_driver", "capabilities": {}, "config_schema": {"type": "object", "additionalProperties": false}},
+    {"id": "sample.success/processor", "type": "result_processor", "entry_point": "drone_ext_sample:create_result_processor", "capabilities": {}, "config_schema": {"type": "object", "additionalProperties": false}},
+    {"id": "sample.search/benchmark", "type": "benchmark", "entry_point": "drone_ext_sample:create_benchmark", "capabilities": {}, "config_schema": {"type": "object", "additionalProperties": false}}
+  ]
+}

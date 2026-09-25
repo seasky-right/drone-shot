@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drone-builtin-pack"
+version = "0.1.0"
+description = "First-party drone backend, task, agent, and evaluator components"
+requires-python = ">=3.13,<3.14"
+dependencies = ["drone-platform==0.1.0", "msgpack==1.1.1"]
+
+[project.entry-points."drone.plugins.v02"]
+"drone.builtin" = "builtin_pack:register"
+
+[tool.setuptools]
+packages = ["builtin_pack", "agents", "backends", "backends.airsim", "backends.mock", "evaluators", "simulator_contract", "tasks"]
+
+[tool.setuptools.package-data]
+builtin_pack = ["drone_plugin.json", "component-cases.json", "sample-v02.json"]

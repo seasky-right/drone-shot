@@ -9,13 +9,14 @@ import math
 from pathlib import Path
 import time
 from typing import Callable
+from uuid import uuid4
 
 from contracts import (
     Action, ActionKind, BackendConfig, CleanupResult, ContractError,
     ExecutionResult, PlatformContractException, PlatformObservation,
     PositionNed, SensorReference, TaskSpec,
 )
-from simulator_contract.contracts import Capability, ErrorCode, SensorKind, SensorRequest, SimulatorContractException
+from simulator_contract.contracts import Capability, ErrorCode, PoseNed, SensorKind, SensorRequest, SimulatorContractException
 from simulator_contract.legacy_airsim import AirSimLegacyAdapter
 
 
@@ -65,30 +66,59 @@ class AirSimBackend:
         self._options = options
         self._config, self._task, self._home = config, task, task.home_position_ned
         self._adapter = self._factory(host=host, port=port)
+        self.runtime_metadata = {"state_confirmed_rpc_false": []}
         started = time.monotonic()
         try:
             self._check(self._adapter.connect(_number(options, "connect_timeout_s", 5.0)), "connect")
             self._check(self._adapter.reset_vehicle(), "reset")
             self._check(self._adapter.set_api_control(self._rpc_vehicle_id(), True), "api_control")
             self._check(self._adapter.arm(self._rpc_vehicle_id(), True), "arm")
+            staging = options.get("spawn_position_ned")
+            if staging is not None:
+                if not isinstance(staging, dict):
+                    raise PlatformContractException(ContractError("invalid_argument", "connection.spawn_position_ned must be an object"))
+                position = PositionNed.from_dict(staging)
+                measured = self._state().pose_ned
+                self._check(self._adapter.set_vehicle_pose(self._rpc_vehicle_id(), PoseNed(
+                    position.north_m, position.east_m, position.down_m,
+                    measured.orientation_w, measured.orientation_x,
+                    measured.orientation_y, measured.orientation_z,
+                )), "set_vehicle_pose")
+                self._wait_for(
+                    lambda state: self._distance(state.pose_ned, position) <= _number(options, "home_tolerance_m", 2.0),
+                    _number(options, "spawn_confirm_timeout_s", 3.0),
+                    "staging position was not confirmed",
+                )
+                # Teleporting near the road briefly induces contact motion in UE4.
+                time.sleep(_number(options, "spawn_settle_delay_s", 1.0))
+                self._wait_for(
+                    lambda state: math.hypot(*state.velocity_ned_mps) <=
+                    _number(options, "spawn_speed_tolerance_mps", 0.03),
+                    _number(options, "spawn_settle_timeout_s", 5.0),
+                    "staging position did not settle before takeoff",
+                )
             ground = self._state()
             home_error = self._distance(ground.pose_ned, self._home)
             if home_error > _number(options, "home_tolerance_m", 2.0):
                 raise PlatformContractException(ContractError("precondition_failed", f"reset position differs from task home by {home_error:.2f} m"))
             if options.get("takeoff_on_reset", True) is not True:
                 raise PlatformContractException(ContractError("invalid_argument", "P2 AirSimBackend requires takeoff_on_reset=true"))
-            self._check(self._adapter.takeoff(self._rpc_vehicle_id(), _number(options, "takeoff_timeout_s", 20.0)), "takeoff")
+            takeoff = self._adapter.takeoff(self._rpc_vehicle_id(), _number(options, "takeoff_timeout_s", 20.0))
             height = _number(options, "takeoff_min_height_m", 0.3)
-            self._wait_for(lambda state: self._home.down_m - state.pose_ned.down_m >= height,
-                           _number(options, "takeoff_confirm_timeout_s", 10.0), "takeoff was not confirmed by altitude")
+            self._confirm_command_by_state(
+                takeoff, "takeoff", "takeoff",
+                lambda state: self._home.down_m - state.pose_ned.down_m >= height and state.landed is not True,
+                _number(options, "takeoff_confirm_timeout_s", 10.0),
+                "takeoff was not confirmed by altitude and landed state",
+            )
             self._sequence = 0
-            self.runtime_metadata = {
+            self.runtime_metadata.update({
                 "backend": "airsim", "simulator_id": self._adapter.simulator_id,
                 "vehicle_id": config.vehicle_id, "host": host, "port": port,
                 "reset_duration_s": time.monotonic() - started,
                 "declared_capabilities": sorted(item.value for item in self._adapter.capabilities(self._rpc_vehicle_id())),
                 "world_frame": "NED", "takeoff_on_reset": True,
-            }
+            })
             return self.observe()
         except Exception as exc:
             try:
@@ -129,10 +159,18 @@ class AirSimBackend:
                         continue
                     suffix = "png" if kind_name == "rgb" else "f32"
                     safe_id = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in sensor_id)
-                    relative = f"sensors/{self._sequence:06d}_{kind_name}_{safe_id}.{suffix}"
-                    destination = Path(self._config.resource_root) / relative
-                    destination.parent.mkdir(parents=True, exist_ok=True)
-                    destination.write_bytes(reading.payload)
+                    sensor_dir = Path(self._config.resource_root) / "sensors"
+                    sensor_dir.mkdir(parents=True, exist_ok=True)
+                    while True:
+                        relative = f"sensors/{self._sequence:06d}_{kind_name}_{safe_id}_{uuid4().hex}.{suffix}"
+                        destination = Path(self._config.resource_root) / relative
+                        try:
+                            with destination.open("xb") as output:
+                                output.write(reading.payload)
+                            break
+                        except FileExistsError:
+                            # A new capture must never replace an earlier reference.
+                            continue
                     sensors.append(SensorReference(sensor_id, kind_name, relative, reading.metadata.wall_time_ns))
                 except (OSError, SimulatorContractException) as exc:
                     missing[key] = _error(exc).code
@@ -157,9 +195,12 @@ class AirSimBackend:
         started = time.monotonic()
         try:
             if action.kind is ActionKind.HOVER:
-                self._check(self._adapter.hover(self._rpc_vehicle_id()), "hover")
-                self._wait_for(lambda state: math.hypot(*state.velocity_ned_mps[:2]) <= _number(self._options, "hover_speed_tolerance_mps", 0.5),
-                               max(0.001, action.deadline_s - (time.monotonic() - started)), "hover speed was not confirmed")
+                self._confirm_command_by_state(
+                    self._adapter.hover(self._rpc_vehicle_id()), "hover", "hover",
+                    lambda state: math.hypot(*state.velocity_ned_mps) <= _number(self._options, "hover_speed_tolerance_mps", 0.5),
+                    max(0.001, action.deadline_s - (time.monotonic() - started)),
+                    "hover speed was not confirmed",
+                )
             elif action.kind is ActionKind.MOVE_TO:
                 self._move_to(action.target_position_ned, max(0.001, action.deadline_s - (time.monotonic() - started)))
             else:
@@ -170,11 +211,13 @@ class AirSimBackend:
         except Exception as exc:
             return ExecutionResult(action.action_id, True, True, False, time.time_ns(), _error(exc))
 
-    def _move_to(self, target: PositionNed, timeout_s: float) -> None:
+    def _move_to(self, target: PositionNed, timeout_s: float,
+                 position_tolerance_m: float | None = None) -> None:
         assert self._adapter is not None and self._config is not None
         deadline = time.monotonic() + timeout_s
         speed = _number(self._options, "move_speed_mps", 1.0)
-        tolerance = _number(self._options, "position_tolerance_m", 0.75)
+        tolerance = (position_tolerance_m if position_tolerance_m is not None
+                     else _number(self._options, "position_tolerance_m", 0.75))
         interval = _number(self._options, "control_interval_s", 0.25)
         while True:
             state = self._state()
@@ -185,7 +228,13 @@ class AirSimBackend:
             if time.monotonic() > deadline:
                 raise PlatformContractException(ContractError("timeout", f"move_to deadline elapsed; remaining {distance:.2f} m"))
             if distance <= tolerance:
-                self._check(self._adapter.hover(self._rpc_vehicle_id()), "hover_at_target")
+                self._confirm_command_by_state(
+                    self._adapter.hover(self._rpc_vehicle_id()), "hover_at_target", "hover",
+                    lambda settled: self._distance(settled.pose_ned, target) <= tolerance
+                    and math.hypot(*settled.velocity_ned_mps) <= _number(self._options, "hover_speed_tolerance_mps", 0.5),
+                    max(0.001, deadline - time.monotonic()),
+                    "target hover was not confirmed",
+                )
                 return
             remaining = deadline - time.monotonic()
             if remaining <= 0:
@@ -208,8 +257,11 @@ class AirSimBackend:
             state = self._state()
             if state.landed is not True and self._home.down_m - state.pose_ned.down_m > 0.3:
                 flight_down = min(state.pose_ned.down_m, self._home.down_m - _number(self._options, "return_height_m", 1.0))
-                self._move_to(PositionNed(self._home.north_m, self._home.east_m, flight_down),
-                              _number(self._options, "return_timeout_s", 30.0))
+                self._move_to(
+                    PositionNed(self._home.north_m, self._home.east_m, flight_down),
+                    _number(self._options, "return_timeout_s", 30.0),
+                    _number(self._options, "return_position_tolerance_m", 0.5),
+                )
         except Exception as exc:
             errors.append(_error(exc))
         try:
@@ -221,19 +273,36 @@ class AirSimBackend:
                                "landed state not confirmed")
                 self.runtime_metadata["landing_confirmation"] = "landed_state"
             except PlatformContractException:
-                # Legacy UE4 can keep reporting Flying near ground. This fallback
-                # mirrors frozen verification behavior but still checks altitude.
-                self._check(self._adapter.move_to_z(self._rpc_vehicle_id(), self._home.down_m - 0.15, 0.75, 20.0), "near_ground")
-                self._check(self._adapter.land(self._rpc_vehicle_id(), 20.0), "land_retry")
-                try:
-                    self._wait_for(lambda state: state.landed is True, 3.0, "landed state not confirmed")
-                    self.runtime_metadata["landing_confirmation"] = "landed_state_after_retry"
-                except PlatformContractException:
-                    near = self._state()
-                    if abs(near.pose_ned.down_m - self._home.down_m) > _number(self._options, "near_ground_tolerance_m", 0.5):
-                        raise
+                # This legacy scene can report Flying while stationary on the road.
+                near = self._state()
+                if not self._near_ground_stationary(near):
+                    result = self._adapter.move_to_z(
+                        self._rpc_vehicle_id(), self._home.down_m - 0.15, 0.75, 20.0
+                    )
+                    if not result.accepted and not self._near_ground_stationary(self._state()):
+                        self._check(result, "near_ground")
+                    self._check(self._adapter.land(self._rpc_vehicle_id(), 20.0), "land_retry")
+                    try:
+                        self._wait_for(lambda state: state.landed is True, 3.0,
+                                       "landed state not confirmed")
+                        self.runtime_metadata["landing_confirmation"] = "landed_state_after_retry"
+                    except PlatformContractException:
+                        near = self._state()
+                if self.runtime_metadata["landing_confirmation"] == "pending":
+                    if not self._near_ground_stationary(near):
+                        raise PlatformContractException(ContractError(
+                            "timeout", "landing was not confirmed by landed state or near-ground stationary state"
+                        ))
                     self.runtime_metadata["landing_confirmation"] = "near_ground_disarmed_compatibility"
+        except Exception as exc:
+            errors.append(_error(exc))
+        # Release control even when landing confirmation fails, so a failed
+        # fallback cannot strand an armed vehicle in the simulator.
+        try:
             self._check(self._adapter.arm(self._rpc_vehicle_id(), False), "disarm")
+        except Exception as exc:
+            errors.append(_error(exc))
+        try:
             self._check(self._adapter.set_api_control(self._rpc_vehicle_id(), False), "release_api_control")
         except Exception as exc:
             errors.append(_error(exc))
@@ -272,6 +341,35 @@ class AirSimBackend:
             if time.monotonic() >= deadline:
                 raise PlatformContractException(ContractError("timeout", message))
             time.sleep(min(poll, max(0.0, deadline - time.monotonic())))
+
+    def _near_ground_stationary(self, state) -> bool:
+        assert self._home is not None
+        return (
+            abs(state.pose_ned.down_m - self._home.down_m) <=
+            _number(self._options, "near_ground_tolerance_m", 0.5)
+            and math.hypot(*state.velocity_ned_mps) <=
+            _number(self._options, "near_ground_speed_tolerance_mps", 0.2)
+        )
+
+    def _confirm_command_by_state(self, result, operation: str, rpc_method: str,
+                                  predicate, timeout_s: float, message: str) -> None:
+        legacy_false = (
+            result.completed and not result.accepted and result.error is not None
+            and result.error.code is ErrorCode.SIMULATOR
+            and result.error.message == f"{rpc_method} returned false"
+        )
+        if not legacy_false:
+            self._check(result, operation)
+        try:
+            self._wait_for(predicate, timeout_s, message)
+        except PlatformContractException as exc:
+            if legacy_false:
+                raise PlatformContractException(ContractError(
+                    "simulator", f"{operation}: {rpc_method} returned false; {message}"
+                )) from exc
+            raise
+        if legacy_false:
+            self.runtime_metadata.setdefault("state_confirmed_rpc_false", []).append(operation)
 
     @staticmethod
     def _distance(pose, position: PositionNed) -> float:

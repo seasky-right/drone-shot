@@ -21,8 +21,9 @@ origin. `move_to` computes world NED error, converts horizontal command to
 body forward/right using state quaternion yaw, and sends bounded velocity
 segments. An RPC reply alone is insufficient; each segment is followed by a
 new state read and distance check. A monotonic deadline and configurable
-`position_tolerance_m` bound the action. Task success is still decided by the
-Task from its post-action observation.
+`position_tolerance_m` bound the action. `hover` confirms that the full
+three-axis NED velocity is within `hover_speed_tolerance_mps`. Task success
+is still decided by the Task from its post-action observation.
 
 Supported `connection` settings include `host`, `port`,
 `rpc_vehicle_id`, `connect_timeout_s`, `home_tolerance_m`,
@@ -36,9 +37,13 @@ Supported `connection` settings include `host`, `port`,
 `sensors` is a list of `{"sensor_id": "0", "kind": "rgb"}` or `depth`.
 A binary sample is written only after the adapter returns a nonempty payload.
 A depth failure or empty payload appears in `missing_sensors`; no image is
-fabricated. Each `SensorReference.relative_path` is relative to
-`BackendConfig.resource_root`. For Runner integration this root must equal
-the episode directory; that directory agreement has not yet been verified.
+fabricated. Every capture gets a new file opened exclusively, so repeated
+observations at the same action sequence cannot overwrite earlier images.
+Each `SensorReference.relative_path` is relative to
+`BackendConfig.resource_root`. The EpisodeRunner sets this root to its
+episode directory for every backend and records the effective config;
+independent smoke runs set their own output root. A FakeRpc episode verifies
+capture, recording, and replay; real simulator behavior remains unverified.
 Platform observations contain NED position/velocity and sensor file
 references, while low-level sensor metadata remains in the adapter layer.
 

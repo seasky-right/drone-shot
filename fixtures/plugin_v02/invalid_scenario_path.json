@@ -1,0 +1,10 @@
+{
+  "schema": "drone.platform.contract/v0.2",
+  "scenario_id": "urban-1",
+  "version": "1.0",
+  "checksum": "sha256:abc",
+  "resources": {"map": "../outside.json"},
+  "seed": 3,
+  "initial_states": {},
+  "truth_access": "task_evaluator"
+}

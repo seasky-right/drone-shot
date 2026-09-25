@@ -1,0 +1,10 @@
+{
+  "components": {
+    "backend": {"id": "sample.mock/backend", "config": {"unknown": true}},
+    "scenario": {"id": "sample.urban/scenario"},
+    "task": {"id": "sample.search/task"},
+    "agents": {"central": {"id": "sample.central/agent"}}
+  },
+  "vehicles": ["A", "B"],
+  "bindings": [{"agent_id": "central", "vehicle_ids": ["A", "B"]}]
+}

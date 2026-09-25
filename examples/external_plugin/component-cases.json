@@ -1,0 +1,13 @@
+{
+  "sample.mock/backend": {"config": {}},
+  "sample.mock/runtime": {"config": {}},
+  "sample.urban/scenario": {"config": {"seed": 7, "target_north_m": 5}},
+  "sample.search/task": {"config": {}},
+  "sample.mapping/task": {"config": {}},
+  "sample.central/agent": {"config": {"target_north_m": 5}},
+  "sample.search/evaluator": {"config": {}},
+  "sample.urban/generator": {"config": {}},
+  "sample.training/driver": {"config": {}},
+  "sample.success/processor": {"config": {}},
+  "sample.search/benchmark": {"config": {}}
+}

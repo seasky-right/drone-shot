@@ -1,0 +1,11 @@
+{
+  "schema": "drone.platform.contract/v0.2",
+  "action_id": "move-1",
+  "vehicle_id": "uav-1",
+  "kind": "drone.control/move_to",
+  "channel": "control",
+  "payload_schema": "drone.action.move_to/v0.2",
+  "payload": {},
+  "deadline_s": 2.0,
+  "surprise": true
+}

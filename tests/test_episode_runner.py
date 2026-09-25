@@ -82,6 +82,18 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(steps[0]["observation_after"]["sequence"], 1)
         self.assertTrue(result.cleanup.succeeded)
 
+    def test_backend_failure_precedes_task_and_evaluator_hooks(self):
+        class LaterTaskFailure(ReachPointTask):
+            def update(self, step):
+                raise RuntimeError("later task error")
+
+        result, steps, events = self.run_episode(
+            backend=MockBackend(fail_next_action=True),
+            task=LaterTaskFailure((5, 0, -2)))
+        self.assertEqual(result.termination_reason, TerminationReason.BACKEND_ERROR)
+        self.assertEqual(len(steps), 1)
+        self.assertFalse(any(event["fields"].get("stage") == "task.update" for event in events))
+
     def test_agent_task_and_evaluator_errors_have_results(self):
         for key, component, expected, step_count in (
             ("agent", AgentFails(TARGET), TerminationReason.AGENT_ERROR, 0),
@@ -167,5 +179,26 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(steps, [])
         self.assertTrue(result.cleanup.succeeded)
         self.assertTrue(any(e["kind"] == "cancelled" for e in events))
+    def test_backend_resources_use_recorded_episode_directory(self):
+        class CapturingBackend(MockBackend):
+            def reset(self, config, task):
+                self.received_config = config
+                return super().reset(config, task)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            backend = CapturingBackend()
+            caller_config = BackendConfig("mock", "drone-1", resource_root=str(root / "elsewhere"))
+            runner = EpisodeRunner(
+                backend, FixedMoveAgent(TARGET), ReachPointTask((5, 0, -2)),
+                ReachPointEvaluator((5, 0, -2)), Recorder(root),
+            )
+            result = runner.run(spec(), caller_config, episode_id="recorded")
+            episode_dir = (root / "recorded").resolve()
+            self.assertTrue(result.success)
+            self.assertEqual(backend.received_config.resource_root, str(episode_dir))
+            recorded = json.loads((episode_dir / "backend.json").read_text(encoding="utf-8"))
+            self.assertEqual(recorded["resource_root"], str(episode_dir))
+
 if __name__ == "__main__":
     unittest.main()

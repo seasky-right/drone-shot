@@ -18,8 +18,11 @@ class FakeRpc:
         self.position = [0.0, 0.0, 0.0]
         self.flying = False
         self.fail_method = None
+        self.false_after_effect_methods = set()
         self.yaw = math.pi / 2
         self.freeze_motion = False
+        self.velocity = [0.0, 0.0, 0.0]
+        self.image_payloads = None
 
     def close(self):
         self.closed = True
@@ -31,6 +34,9 @@ class FakeRpc:
         if method == "reset":
             self.position = [0.0, 0.0, 0.0]
             self.flying = False
+        if method == "simSetVehiclePose":
+            pose = params[0]["position"]
+            self.position = [pose["x_val"], pose["y_val"], pose["z_val"]]
         if method == "takeoff":
             self.position[2] = -1.0
             self.flying = True
@@ -51,12 +57,13 @@ class FakeRpc:
                 "kinematics_estimated": {
                     "position": dict(zip(("x_val", "y_val", "z_val"), self.position)),
                     "orientation": {"w_val": math.cos(self.yaw / 2), "x_val": 0, "y_val": 0, "z_val": math.sin(self.yaw / 2)},
-                    "linear_velocity": {"x_val": 0, "y_val": 0, "z_val": 0},
+                    "linear_velocity": dict(zip(("x_val", "y_val", "z_val"), self.velocity)),
                 },
             }
         if method == "simGetImages":
-            return [{"width": 1, "height": 1, "image_data_uint8": b"pngdata", "time_stamp": 456}]
-        return True
+            payload = self.image_payloads.pop(0) if self.image_payloads is not None else b"pngdata"
+            return [{"width": 1, "height": 1, "image_data_uint8": payload, "time_stamp": 456}]
+        return False if method in self.false_after_effect_methods else True
 
 
 class AirSimBackendTests(unittest.TestCase):
@@ -90,6 +97,34 @@ class AirSimBackendTests(unittest.TestCase):
         self.backend.close()
         self.backend.close()
         self.assertTrue(self.rpc.closed)
+
+    def test_staging_pose_and_state_confirmed_legacy_false(self):
+        self.rpc.false_after_effect_methods = {"takeoff", "hover"}
+        self.task = TaskSpec("reach", "reach_point", 20, PositionNed(4, 0, -0.25), "relative_to_home")
+        initial = self.backend.reset(self.config(
+            spawn_position_ned={"north_m": 4, "east_m": 0, "down_m": -0.25},
+            home_tolerance_m=0.1,
+        ), self.task)
+        self.assertAlmostEqual(initial.position_ned.north_m, 4)
+        self.assertIn("takeoff", self.backend.runtime_metadata["state_confirmed_rpc_false"])
+        self.assertTrue(self.backend.execute(Action("hover", ActionKind.HOVER, "drone-1", 1)).succeeded)
+        self.assertIn("hover", self.backend.runtime_metadata["state_confirmed_rpc_false"])
+        self.assertTrue(self.backend.cleanup().succeeded)
+
+    def test_false_takeoff_without_ascent_fails(self):
+        self.rpc.fail_method = "takeoff"
+        with self.assertRaises(PlatformContractException) as caught:
+            self.backend.reset(self.config(takeoff_confirm_timeout_s=0.01,
+                                           state_poll_interval_s=0.005), self.task)
+        self.assertEqual(caught.exception.error.code, "simulator")
+
+    def test_false_hover_while_moving_fails(self):
+        self.backend.reset(self.config(state_poll_interval_s=0.005), self.task)
+        self.rpc.false_after_effect_methods = {"hover"}
+        self.rpc.velocity[2] = 2.0
+        result = self.backend.execute(Action("hover", ActionKind.HOVER, "drone-1", 0.03))
+        self.assertFalse(result.succeeded)
+        self.assertEqual(result.error.code, "simulator")
 
     def test_false_rpc_is_structured_failure(self):
         self.rpc.fail_method = "armDisarm"
@@ -142,6 +177,32 @@ class AirSimBackendTests(unittest.TestCase):
         result = self.backend.execute(Action("late", ActionKind.HOVER, "drone-1", 0.005))
         self.assertFalse(result.succeeded)
         self.assertEqual(result.error.code, "timeout")
+    def test_hover_waits_for_vertical_speed_to_settle(self):
+        self.backend.reset(self.config(state_poll_interval_s=0.005), self.task)
+        self.rpc.velocity[2] = 2.0
+        result = self.backend.execute(Action("descending", ActionKind.HOVER, "drone-1", 0.03))
+        self.assertFalse(result.succeeded)
+        self.assertEqual(result.error.code, "timeout")
+        self.rpc.velocity[2] = 0.0
+        settled = self.backend.execute(Action("settled", ActionKind.HOVER, "drone-1", 0.1))
+        self.assertTrue(settled.succeeded, settled.error)
+
+    def test_sensor_files_stay_distinct_across_observations_and_id_collisions(self):
+        self.rpc.image_payloads = [b"first", b"second", b"third", b"fourth"]
+        sensors = [{"sensor_id": "cam/a", "kind": "rgb"},
+                   {"sensor_id": "cam?a", "kind": "rgb"}]
+        first = self.backend.reset(self.config(sensors=sensors), self.task)
+        second = self.backend.observe()
+        self.assertEqual((first.sequence, second.sequence), (0, 0))
+        references = (*first.sensors, *second.sensors)
+        self.assertEqual(len(references), 4)
+        paths = [reference.relative_path for reference in references]
+        self.assertEqual(len(set(paths)), 4)
+        self.assertEqual([reference.sensor_id for reference in references],
+                         ["cam/a", "cam?a", "cam/a", "cam?a"])
+        self.assertEqual([(Path(self.temp.name) / path).read_bytes() for path in paths],
+                         [b"first", b"second", b"third", b"fourth"])
+
     def test_cleanup_land_failure_remains_separate(self):
         self.backend.reset(self.config(), self.task)
         self.rpc.fail_method = "land"
@@ -149,6 +210,9 @@ class AirSimBackendTests(unittest.TestCase):
         self.assertTrue(cleanup.attempted)
         self.assertFalse(cleanup.succeeded)
         self.assertEqual(cleanup.error.code, "simulator")
+        self.assertIn(("armDisarm", (False, ""), 5.0), self.rpc.calls)
+        self.assertIn(("enableApiControl", (False, ""), 5.0), self.rpc.calls)
+
     def test_missing_sensor_has_reason(self):
         self.backend.reset(BackendConfig("airsim", "drone-1", {"sensors": [{"sensor_id": "0", "kind": "rgb"}]}), self.task)
         self.assertEqual(self.backend.observe().missing_sensors["rgb:0"], "resource_root_not_configured")

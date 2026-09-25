@@ -144,6 +144,19 @@ class AirSimLegacyAdapter:
         except (OSError, AirSimAdapterError) as error:
             return self._failure_from_exception("reset", error, ErrorCode.TRANSPORT, True)
 
+    def set_vehicle_pose(self, vehicle_id: str, pose: PoseNed) -> CommandResult:
+        """Set a measured staging pose; the caller must confirm the resulting state."""
+        return self._command(
+            "simSetVehiclePose", vehicle_id,
+            {
+                "position": {"x_val": pose.north_m, "y_val": pose.east_m, "z_val": pose.down_m},
+                "orientation": {
+                    "w_val": pose.orientation_w, "x_val": pose.orientation_x,
+                    "y_val": pose.orientation_y, "z_val": pose.orientation_z,
+                },
+            }, False,
+        )
+
     def move_to_z(self, vehicle_id: str, down_m: float, speed_mps: float, timeout_s: float) -> CommandResult:
         """Legacy near-ground landing fallback; caller verifies the final state."""
         return self._command(

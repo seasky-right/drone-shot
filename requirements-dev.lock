@@ -1,3 +1,3 @@
-# P0/P1 tests use only Python's standard-library unittest module.
-# This is intentionally a complete empty third-party test dependency lock.
+# No separate test-only dependencies are declared.
+# Runtime dependencies (packaging and jsonschema) are in pyproject.toml.
 # The build backend pin is in pyproject.toml: setuptools==80.9.0.

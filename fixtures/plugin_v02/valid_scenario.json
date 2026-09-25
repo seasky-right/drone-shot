@@ -1,0 +1,10 @@
+{
+  "schema": "drone.platform.contract/v0.2",
+  "scenario_id": "urban-1",
+  "version": "1.0",
+  "checksum": "sha256:abc",
+  "resources": {"map": "scene/map.json"},
+  "seed": 3,
+  "initial_states": {"uav-1": {"spawn": [0, 0, 0]}},
+  "truth_access": "task_evaluator"
+}

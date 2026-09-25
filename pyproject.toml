@@ -1,6 +1,7 @@
 [build-system]
 requires = ["setuptools==80.9.0"]
-build-backend = "setuptools.build_meta"
+build-backend = "core_build_backend"
+backend-path = ["."]
 
 [project]
 name = "drone-platform"
@@ -10,7 +11,7 @@ readme = "README.md"
 # P0 was validated with CPython 3.13.5.  Broader interpreter support needs
 # its own clean-environment evidence before this bound is relaxed.
 requires-python = ">=3.13,<3.14"
-dependencies = []
+dependencies = ["packaging>=24,<27", "jsonschema>=4.23,<5"]
 
 [project.optional-dependencies]
 dev = []
@@ -20,6 +21,8 @@ legacy-airsim = ["msgpack==1.1.1"]
 drone-run = "core.cli:main"
 drone-experiment = "core.experiment_cli:main"
 drone-replay = "core.replay:main"
+drone-console = "core.console:main"
+drone-plugins = "core.plugin_cli:main"
 
 [tool.setuptools]
-packages = ["agents", "backends", "backends.airsim", "backends.mock", "contracts", "core", "evaluators", "simulator_contract", "tasks"]
+packages = ["contracts", "core"]

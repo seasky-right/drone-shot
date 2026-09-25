@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import csv
+from dataclasses import replace
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from agents.mock import FixedMoveAgent, HoverAgent, OffsetMoveAgent
 from backends.mock import MockBackend
 from contracts import BackendConfig, PositionNed, TaskSpec
 from core.experiment import ExperimentManager, ExperimentPlan
+from core.experiment_cli import build_manager
+from core.plugins import PluginRegistry
 from core.replay import read_episode
 from evaluators.mock import OneStepPositionEvaluator
 from tasks.mock import OneStepPositionTask
@@ -44,6 +48,57 @@ def manager(root: Path, **extra_agents) -> ExperimentManager:
 
 
 class ExperimentManagerTests(unittest.TestCase):
+    def test_experiment_snapshot_omits_connection_and_unvalidated_component_config(self) -> None:
+        with TemporaryDirectory() as temporary:
+            supplied = replace(
+                plan(agents=("fixed",), seeds=(1,), repeats=1),
+                backend_config=BackendConfig("mock", "Drone", {"password": "backend-secret"}),
+                components={"agent": {"id": "example/agent", "config": {"token": "agent-secret"}}},
+            )
+            result = manager(Path(temporary)).run(supplied)
+            recorded = json.loads((result.directory / "config.json").read_text(encoding="utf-8"))
+            self.assertEqual(recorded["backend_config"]["connection"], {})
+            self.assertIsNone(recorded["components"])
+            self.assertNotIn("backend-secret", json.dumps(recorded))
+            self.assertNotIn("agent-secret", json.dumps(recorded))
+
+    def test_cli_snapshot_redacts_schema_secret_including_local_reference(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        manifest = json.loads((root / "builtin_pack" / "drone_plugin.json").read_text(encoding="utf-8"))
+        for component in manifest["components"]:
+            if component["id"] == "drone.mock/agent.fixed":
+                component["config_schema"] = {
+                    "type": "object", "$defs": {"secret": {"type": "string", "writeOnly": True}},
+                    "properties": {"token": {"$ref": "#/$defs/secret"}},
+                    "additionalProperties": False,
+                }
+                break
+        with TemporaryDirectory() as temporary:
+            path = Path(temporary) / "drone_plugin.json"
+            path.write_text(json.dumps(manifest), encoding="utf-8")
+            with patch("core.plugins.metadata.distributions", return_value=[]):
+                registry = PluginRegistry.discover(manifest_paths=(path,))
+            components = {
+                "backend": {"id": "drone.mock/backend"},
+                "task": {"id": "drone.mock/task"},
+                "evaluator": {"id": "drone.mock/evaluator"},
+                "agents": {"fixed": {"id": "drone.mock/agent.fixed",
+                                     "config": {"token": "agent-secret"}}},
+            }
+            supplied = replace(
+                plan(agents=("fixed",), seeds=(1,), repeats=1),
+                backend_config=BackendConfig("mock", "Drone", {"password": "backend-secret"}),
+                components=components,
+            )
+            with patch("core.experiment_cli.discover_plugins", return_value=registry):
+                result = build_manager(supplied, Path(temporary) / "runs").run(supplied)
+            recorded = json.loads((result.directory / "config.json").read_text(encoding="utf-8"))
+            self.assertEqual(recorded["backend_config"]["connection"], {})
+            self.assertEqual(recorded["components"]["agents"]["fixed"]["config"],
+                             {"token": "[REDACTED]"})
+            self.assertNotIn("backend-secret", json.dumps(recorded))
+            self.assertNotIn("agent-secret", json.dumps(recorded))
+
     def test_three_agents_share_seed_matrix_and_record_all_failures(self) -> None:
         with TemporaryDirectory() as temporary:
             result = manager(Path(temporary)).run(plan())

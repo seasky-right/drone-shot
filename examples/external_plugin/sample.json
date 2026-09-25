@@ -1,0 +1,22 @@
+{
+  "episode_id": "sample-two-vehicle",
+  "components": {
+    "backend": {"id": "sample.mock/backend"},
+    "scenario": {"id": "sample.urban/scenario", "config": {"seed": 7, "target_north_m": 5}},
+    "task": {"id": "sample.search/task"},
+    "agents": {"central": {"id": "sample.central/agent", "config": {"target_north_m": 5, "token": "sample-only-secret"}}}
+  },
+  "vehicles": ["A", "B"],
+  "bindings": [{"agent_id": "central", "vehicle_ids": ["A", "B"]}],
+  "required_action_kinds": ["sample/move"],
+  "action_schemas": {"sample/move": "sample.move/v1"},
+  "payload_schemas": {
+    "sample/move": {
+      "type": "object",
+      "required": ["north_m"],
+      "properties": {"north_m": {"type": "number"}},
+      "additionalProperties": false
+    }
+  },
+  "max_steps": 2
+}

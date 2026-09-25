@@ -1,0 +1,26 @@
+{
+  "drone.v02.mock/backend": {
+    "config": {},
+    "probe": {
+      "action": {
+        "schema": "drone.platform.contract/v0.2",
+        "action_id": "builtin-probe-move",
+        "vehicle_id": "A",
+        "kind": "drone/move",
+        "channel": "control",
+        "payload_schema": "drone.move/v1",
+        "payload": {"north_m": 5},
+        "deadline_s": 1.0
+      }
+    }
+  },
+  "drone.v02.mock/task": {"config": {}},
+  "drone.v02.mock/agent": {"config": {"target_north_m": 5}},
+  "drone.v02.mock/evaluator": {"config": {}},
+  "drone.v02.mock/scenario": {"config": {"seed": 7, "target_north_m": 5}},
+  "drone.v02.mock/generator": {"config": {}, "probe": {"seed": 7}},
+  "drone.v02.mock/runtime": {"config": {}},
+  "drone.v02.mock/driver": {"config": {}},
+  "drone.v02.mock/processor": {"config": {}},
+  "drone.v02.mock/benchmark": {"config": {}}
+}

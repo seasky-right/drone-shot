@@ -1,0 +1,22 @@
+{
+  "episode_id": "direct-agent-builtin-mock",
+  "components": {
+    "backend": {"id": "drone.v02.mock/backend"},
+    "scenario": {"id": "drone.v02.mock/scenario", "config": {"seed": 7, "target_north_m": 5.0}},
+    "task": {"id": "drone.v02.mock/task"},
+    "agents": {"direct_agent": {"id": "drone.agent.direct/agent", "config": {"target_north_m": 5.0, "step_size_m": 2.0}}}
+  },
+  "vehicles": ["A", "B"],
+  "bindings": [{"agent_id": "direct_agent", "vehicle_ids": ["A", "B"]}],
+  "required_action_kinds": ["drone/move"],
+  "action_schemas": {"drone/move": "drone.move/v1"},
+  "payload_schemas": {
+    "drone/move": {
+      "type": "object",
+      "required": ["north_m"],
+      "properties": {"north_m": {"type": "number"}},
+      "additionalProperties": false
+    }
+  },
+  "max_steps": 5
+}

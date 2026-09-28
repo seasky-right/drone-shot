@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drone-agent-spatial-obstacle-search"
+version = "0.1.0"
+description = "Obstacle-aware boustrophedon spatial search agent plugin for drone platform v0.2"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["drone_spatial_obstacle_search*"]
+
+[tool.setuptools.package-data]
+drone_spatial_obstacle_search = ["drone_plugin.json"]

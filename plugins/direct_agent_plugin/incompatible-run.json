@@ -1,0 +1,20 @@
+{
+  "episode_id": "direct-agent-incompatible-hover",
+  "components": {
+    "backend": {"id": "drone.v02.mock/backend"},
+    "scenario": {"id": "drone.v02.mock/scenario", "config": {"seed": 7, "target_north_m": 5.0}},
+    "task": {"id": "drone.v02.mock/task"},
+    "agents": {"direct_agent": {"id": "drone.agent.direct/agent"}}
+  },
+  "vehicles": ["A", "B"],
+  "bindings": [{"agent_id": "direct_agent", "vehicle_ids": ["A", "B"]}],
+  "required_action_kinds": ["drone/hover"],
+  "action_schemas": {"drone/hover": "drone.hover/v1"},
+  "payload_schemas": {
+    "drone/hover": {
+      "type": "object",
+      "additionalProperties": false
+    }
+  },
+  "max_steps": 2
+}

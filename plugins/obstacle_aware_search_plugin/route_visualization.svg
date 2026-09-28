@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 800" width="100%" height="100%" style="background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <!-- Marker for Obstacle-Aware Path -->
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
+    </marker>
+    <!-- Marker for Lawnmower Baseline Path -->
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444" />
+    </marker>
+    <!-- Waypoint Dot -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <!-- Title & Subtitle -->
+  <text x="50" y="45" font-size="22" font-weight="bold" fill="#1e293b">无人机空间搜索避障航线对比示意图 (Seed 7, lane_spacing=3.0m)</text>
+  <text x="50" y="70" font-size="14" fill="#64748b">Obstacle-Aware Search Agent (绕行避障) vs Baseline Lawnmower (碰撞拒绝/崩溃)</text>
+
+  <!-- Main Canvas: Origin at (100, 120), Width=540 (90px/m), Height=540 (90px/m) -->
+  <!-- Map East -> X (0m -> 100, 6m -> 640), North -> Y (0m -> 120, 6m -> 660) -->
+  
+  <!-- Grid Background -->
+  <rect x="100" y="120" width="540" height="540" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2" rx="4" />
+  
+  <!-- Grid Lines (Every 1m = 90px) -->
+  <g stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,3">
+    <!-- Vertical lines (East 1m to 5m) -->
+    <line x1="190" y1="120" x2="190" y2="660" />
+    <line x1="280" y1="120" x2="280" y2="660" />
+    <line x1="370" y1="120" x2="370" y2="660" />
+    <line x1="460" y1="120" x2="460" y2="660" />
+    <line x1="550" y1="120" x2="550" y2="660" />
+    <!-- Horizontal lines (North 1m to 5m) -->
+    <line x1="100" y1="210" x2="640" y2="210" />
+    <line x1="100" y1="300" x2="640" y2="300" />
+    <line x1="100" y1="390" x2="640" y2="390" />
+    <line x1="100" y1="480" x2="640" y2="480" />
+    <line x1="100" y1="570" x2="640" y2="570" />
+  </g>
+
+  <!-- Axis Labels -->
+  <!-- East Axis (Top & Bottom) -->
+  <text x="370" y="105" font-size="14" font-weight="600" fill="#475569" text-anchor="middle">East (东向坐标, 米) →</text>
+  <text x="100" y="685" font-size="12" fill="#64748b" text-anchor="middle">E: 0.0m</text>
+  <text x="190" y="685" font-size="12" fill="#64748b" text-anchor="middle">1.0m</text>
+  <text x="280" y="685" font-size="12" fill="#64748b" text-anchor="middle">2.0m</text>
+  <text x="370" y="685" font-size="12" font-weight="bold" fill="#0f172a" text-anchor="middle">3.0m</text>
+  <text x="460" y="685" font-size="12" fill="#64748b" text-anchor="middle">4.0m</text>
+  <text x="550" y="685" font-size="12" fill="#64748b" text-anchor="middle">5.0m</text>
+  <text x="640" y="685" font-size="12" fill="#64748b" text-anchor="middle">6.0m</text>
+
+  <!-- North Axis (Left) -->
+  <text x="75" y="390" font-size="14" font-weight="600" fill="#475569" text-anchor="middle" transform="rotate(-90 75 390)">North (北向坐标, 米) →</text>
+  <text x="90" y="125" font-size="12" fill="#64748b" text-anchor="end">N: 0.0m</text>
+  <text x="90" y="215" font-size="12" fill="#64748b" text-anchor="end">1.0m</text>
+  <text x="90" y="305" font-size="12" fill="#64748b" text-anchor="end">2.0m</text>
+  <text x="90" y="395" font-size="12" font-weight="bold" fill="#0f172a" text-anchor="end">3.0m</text>
+  <text x="90" y="485" font-size="12" fill="#64748b" text-anchor="end">4.0m</text>
+  <text x="90" y="575" font-size="12" fill="#64748b" text-anchor="end">5.0m</text>
+  <text x="90" y="665" font-size="12" fill="#64748b" text-anchor="end">6.0m</text>
+
+  <!-- Target Detection Range: Center (640, 660) Radius = 3.0m = 270px -->
+  <circle cx="640" cy="660" r="270" fill="#fef08a" fill-opacity="0.25" stroke="#eab308" stroke-width="1.5" stroke-dasharray="4,4" />
+  <text x="520" y="640" font-size="11" fill="#b45309" font-weight="500">检测范围 (R=3.0m)</text>
+
+  <!-- Obstacle & Safety Buffer (Center at N=3, E=3 -> cx=370, cy=390) -->
+  <!-- Effective Safety Buffer: R = 0.75 + 0.25 = 1.0m = 90px -->
+  <circle cx="370" cy="390" r="90" fill="#fee2e2" fill-opacity="0.5" stroke="#f87171" stroke-width="1.5" stroke-dasharray="5,5" />
+  <!-- Physical Obstacle: R = 0.75m = 67.5px -->
+  <circle cx="370" cy="390" r="67.5" fill="#fca5a5" stroke="#dc2626" stroke-width="2" filter="url(#shadow)" />
+  <circle cx="370" cy="390" r="4" fill="#991b1b" />
+  <text x="370" y="385" font-size="12" font-weight="bold" fill="#991b1b" text-anchor="middle">静态障碍物</text>
+  <text x="370" y="402" font-size="10" fill="#7f1d1d" text-anchor="middle">(3.0, 3.0) R=0.75m</text>
+  <text x="370" y="495" font-size="10" fill="#b91c1c" text-anchor="middle">安全缓冲边界 (R=1.0m)</text>
+
+  <!-- Target T1: N=6.0m, E=6.0m -> (640, 660) -->
+  <g transform="translate(640, 660)">
+    <circle cx="0" cy="0" r="14" fill="#fbbf24" stroke="#d97706" stroke-width="2" />
+    <polygon points="0,-8 2.5,-2.5 8.5,-2.5 3.5,1.5 5.5,7.5 0,3.5 -5.5,7.5 -3.5,1.5 -8.5,-2.5 -2.5,-2.5" fill="#ffffff" />
+    <text x="-25" y="-18" font-size="12" font-weight="bold" fill="#b45309">目标 T1 (6.0, 6.0)</text>
+  </g>
+
+  <!-- PATH 1: Baseline Lawnmower (Red Dashed) - COLLISION -->
+  <!-- Leg 1: (0,0)->(6,0); Leg 2: (6,0)->(6,3); Leg 3: (6,3)->CRASH at (3.75, 3.0) -->
+  <g stroke="#ef4444" stroke-width="2.5" stroke-dasharray="6,4" fill="none">
+    <!-- (0,0)->(6,0) -->
+    <line x1="100" y1="120" x2="100" y2="660" marker-end="url(#arrow-red)" />
+    <!-- (6,0)->(6,3) -->
+    <line x1="100" y1="660" x2="370" y2="660" marker-end="url(#arrow-red)" />
+    <!-- (6,3)->(3.75, 3) where it collides -->
+    <line x1="370" y1="660" x2="370" y2="457.5" />
+  </g>
+  <!-- Collision Cross -->
+  <g transform="translate(370, 457.5)">
+    <circle cx="0" cy="0" r="12" fill="#ef4444" />
+    <line x1="-5" y1="-5" x2="5" y2="5" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="5" y1="-5" x2="-5" y2="5" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
+    <text x="16" y="4" font-size="12" font-weight="bold" fill="#dc2626">Lawnmower 碰撞/拒绝点</text>
+    <text x="16" y="18" font-size="10" fill="#991b1b">(N=3.75m, E=3.0m)</text>
+  </g>
+
+  <!-- PATH 2: Obstacle-Aware Detour Search Agent (Green Solid) - SUCCESS -->
+  <!-- Leg 1: (0,0)->(6,0) -->
+  <!-- Leg 2: (6,0)->(6,3) -->
+  <!-- Detour: (6,3) -> WP_A(3.88, 3.88) -> WP_B(2.52, 4.15) -> (0,3) -->
+  <!-- Leg 3: (0,3) -> (0,6) -> reaches detection zone and reports! -->
+  <g stroke="#10b981" stroke-width="3" fill="none" stroke-linejoin="round">
+    <!-- Leg 1: (100, 120) -> (100, 660) -->
+    <line x1="100" y1="120" x2="100" y2="660" marker-end="url(#arrow-green)" />
+    <!-- Leg 2: (100, 660) -> (370, 660) -->
+    <line x1="100" y1="660" x2="370" y2="660" marker-end="url(#arrow-green)" />
+    <!-- Detour segment 1: (370, 660) -> (449.5, 469.5) [E=3.88, N=3.88] -->
+    <line x1="370" y1="660" x2="449.5" y2="469.5" marker-end="url(#arrow-green)" />
+    <!-- Detour segment 2: (449.5, 469.5) -> (473.9, 346.9) [E=4.15, N=2.52] -->
+    <line x1="449.5" y1="469.5" x2="473.9" y2="346.9" marker-end="url(#arrow-green)" />
+    <!-- Rejoin segment: (473.9, 346.9) -> (370, 120) [E=3.0, N=0.0] -->
+    <line x1="473.9" y1="346.9" x2="370" y2="120" marker-end="url(#arrow-green)" />
+    <!-- Next lane transition: (370, 120) -> (640, 120) [E=6.0, N=0.0] -->
+    <line x1="370" y1="120" x2="640" y2="120" marker-end="url(#arrow-green)" />
+    <!-- Lane 2: (640, 120) -> Target at (640, 660) [E=6.0, N=6.0] -->
+    <line x1="640" y1="120" x2="640" y2="660" marker-end="url(#arrow-green)" />
+  </g>
+
+  <!-- Detour Waypoints Pins -->
+  <g fill="#10b981" stroke="#ffffff" stroke-width="2">
+    <!-- Start: (0,0) -->
+    <circle cx="100" cy="120" r="7" fill="#2563eb" />
+    <text x="112" y="125" font-size="11" font-weight="bold" fill="#1d4ed8">起飞点 (0.0, 0.0)</text>
+
+    <!-- Turn (6,0) -->
+    <circle cx="100" cy="660" r="5" />
+    <!-- Turn (6,3) -->
+    <circle cx="370" cy="660" r="5" />
+    <text x="350" y="650" font-size="10" fill="#047857" font-weight="600">绕行切入 (6.0, 3.0)</text>
+
+    <!-- Detour WP 1 -->
+    <circle cx="449.5" cy="469.5" r="6" />
+    <text x="460" y="475" font-size="10" font-weight="bold" fill="#047857">绕行点 1 (3.88, 3.88)</text>
+
+    <!-- Detour WP 2 -->
+    <circle cx="473.9" cy="346.9" r="6" />
+    <text x="485" y="345" font-size="10" font-weight="bold" fill="#047857">绕行点 2 (2.52, 4.15)</text>
+
+    <!-- Rejoin (0,3) -->
+    <circle cx="370" cy="120" r="5" />
+    <text x="350" y="140" font-size="10" fill="#047857" font-weight="600">回归航线 (0.0, 3.0)</text>
+    
+    <!-- Turn (0,6) -->
+    <circle cx="640" cy="120" r="5" />
+  </g>
+
+  <!-- Right Sidebar / Legend & Comparison Panel -->
+  <g transform="translate(680, 120)">
+    <!-- Legend Box -->
+    <rect x="0" y="0" width="200" height="260" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="6" />
+    <text x="15" y="28" font-size="14" font-weight="bold" fill="#1e293b">图例说明 (Legend)</text>
+    
+    <!-- Legend Item 1 -->
+    <line x1="15" y1="55" x2="45" y2="55" stroke="#10b981" stroke-width="3" />
+    <circle cx="30" cy="55" r="4" fill="#10b981" />
+    <text x="55" y="59" font-size="11" font-weight="600" fill="#065f46">绕行避障航线 (新Agent)</text>
+    <text x="55" y="73" font-size="10" fill="#64748b">A* 几何绕行，安全通过</text>
+
+    <!-- Legend Item 2 -->
+    <line x1="15" y1="100" x2="45" y2="100" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,3" />
+    <circle cx="30" cy="100" r="4" fill="#ef4444" />
+    <text x="55" y="104" font-size="11" font-weight="600" fill="#991b1b">基线航线 (Lawnmower)</text>
+    <text x="55" y="118" font-size="10" fill="#64748b">航带穿障，直接拒绝/崩溃</text>
+
+    <!-- Legend Item 3 -->
+    <circle cx="30" cy="145" r="9" fill="#fca5a5" stroke="#dc2626" stroke-width="1.5" />
+    <text x="55" y="149" font-size="11" font-weight="600" fill="#991b1b">已知障碍物 (R=0.75m)</text>
+    
+    <!-- Legend Item 4 -->
+    <circle cx="30" cy="180" r="10" fill="#fee2e2" stroke="#f87171" stroke-width="1" stroke-dasharray="3,3" />
+    <text x="55" y="184" font-size="11" font-weight="600" fill="#b91c1c">安全边距 (Margin=0.25m)</text>
+
+    <!-- Legend Item 5 -->
+    <circle cx="30" cy="220" r="9" fill="#fbbf24" stroke="#d97706" stroke-width="1.5" />
+    <text x="55" y="224" font-size="11" font-weight="600" fill="#b45309">搜索目标 T1</text>
+
+    <!-- Performance Comparison Box -->
+    <rect x="0" y="280" width="200" height="260" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="6" />
+    <text x="15" y="308" font-size="13" font-weight="bold" fill="#1e293b">同场景指标对照 (Seed 7)</text>
+    <text x="15" y="325" font-size="10" fill="#64748b">lane_spacing=3.0m, obs=(3,3,0.75)</text>
+
+    <text x="15" y="355" font-size="11" font-weight="bold" fill="#475569">任务终态 (Status):</text>
+    <text x="15" y="372" font-size="11" fill="#dc2626">• Lawnmower: 契约拒绝/失败</text>
+    <text x="15" y="388" font-size="11" fill="#059669">• ObstacleAware: 成功 (1.0)</text>
+
+    <text x="15" y="415" font-size="11" font-weight="bold" fill="#475569">碰撞拒绝次数 (Collisions):</text>
+    <text x="15" y="432" font-size="11" fill="#dc2626">• Lawnmower: 1 次拦截拒绝</text>
+    <text x="15" y="448" font-size="11" fill="#059669">• ObstacleAware: 0 次 (全绿)</text>
+
+    <text x="15" y="475" font-size="11" font-weight="bold" fill="#475569">目标检出与上报 (Report):</text>
+    <text x="15" y="492" font-size="11" fill="#dc2626">• Lawnmower: 0 次 (未到达)</text>
+    <text x="15" y="508" font-size="11" fill="#059669">• ObstacleAware: 1 次 (0 误报)</text>
+  </g>
+
+  <!-- Footer note -->
+  <text x="50" y="760" font-size="11" fill="#94a3b8">注：本示意图仅供离线查看航带与绕行路线设计，不充当自动化测试断言证据。全部测试断言由 tests/test_obstacle_aware_search_plugin.py 独立执行。</text>
+</svg>

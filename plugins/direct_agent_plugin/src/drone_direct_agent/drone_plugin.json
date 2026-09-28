@@ -1,0 +1,46 @@
+{
+  "id": "drone.agent.direct",
+  "version": "0.1.0",
+  "type": "agent",
+  "plugin_api": "drone.plugin.api/v0.2",
+  "entry_point": "drone_direct_agent:create_agent",
+  "dependencies": [],
+  "capabilities": {
+    "action_kinds": [
+      "drone/move"
+    ]
+  },
+  "requires": {
+    "action_kinds": [
+      "drone/move"
+    ]
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "target_north_m": {
+        "type": "number",
+        "default": 5.0,
+        "description": "Target north position in meters"
+      },
+      "step_size_m": {
+        "type": "number",
+        "exclusiveMinimum": 0.0,
+        "description": "Optional step size per step. When omitted, agent commands directly to target_north_m"
+      },
+      "tolerance_m": {
+        "type": "number",
+        "minimum": 0.0,
+        "default": 0.1,
+        "description": "Distance tolerance in meters to consider target position reached"
+      },
+      "action_deadline_s": {
+        "type": "number",
+        "exclusiveMinimum": 0.0,
+        "default": 1.0,
+        "description": "Action execution deadline in seconds"
+      }
+    },
+    "additionalProperties": false
+  }
+}

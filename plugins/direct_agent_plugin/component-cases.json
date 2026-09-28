@@ -1,0 +1,10 @@
+{
+  "drone.agent.direct/agent": {
+    "config": {
+      "target_north_m": 5.0,
+      "step_size_m": 2.0,
+      "tolerance_m": 0.1,
+      "action_deadline_s": 1.0
+    }
+  }
+}

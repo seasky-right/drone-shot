@@ -1,0 +1,89 @@
+{
+  "id": "drone.agent.spatial_search",
+  "version": "0.1.0",
+  "type": "agent",
+  "plugin_api": "drone.plugin.api/v0.2",
+  "entry_point": "drone_spatial_search:create_agent",
+  "dependencies": [],
+  "capabilities": {
+    "action_kinds": [
+      "spatial/move-to",
+      "spatial/report-target"
+    ]
+  },
+  "requires": {
+    "action_kinds": [
+      "spatial/move-to",
+      "spatial/report-target"
+    ],
+    "coordinate_frame": "local_ned",
+    "scenario_id": "sample.spatial-search"
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "lane_spacing_m": {
+        "type": "number",
+        "exclusiveMinimum": 0.0,
+        "default": 2.0,
+        "description": "Spacing between parallel search lanes in meters"
+      },
+      "min_confidence": {
+        "type": "number",
+        "minimum": 0.0,
+        "maximum": 1.0,
+        "default": 0.5,
+        "description": "Minimum detection confidence threshold to trigger a report"
+      },
+      "max_report_attempts": {
+        "type": "integer",
+        "minimum": 1,
+        "default": 3,
+        "description": "Maximum bounded retry attempts for reporting a target before confirmation in observation reports"
+      },
+      "waypoint_tolerance_m": {
+        "type": "number",
+        "exclusiveMinimum": 0.0,
+        "default": 0.3,
+        "description": "Distance tolerance in meters to consider a waypoint reached"
+      },
+      "action_deadline_s": {
+        "type": "number",
+        "exclusiveMinimum": 0.0,
+        "default": 1.0,
+        "description": "Deadline in seconds for each action execution"
+      },
+      "flight_down_m": {
+        "type": "number",
+        "description": "Target flight altitude in NED down meters"
+      },
+      "obstacles": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "center_north_m",
+            "center_east_m",
+            "radius_m"
+          ],
+          "properties": {
+            "center_north_m": {
+              "type": "number"
+            },
+            "center_east_m": {
+              "type": "number"
+            },
+            "radius_m": {
+              "type": "number",
+              "exclusiveMinimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        },
+        "default": [],
+        "description": "Optional known obstacles for route clearance verification"
+      }
+    },
+    "additionalProperties": false
+  }
+}

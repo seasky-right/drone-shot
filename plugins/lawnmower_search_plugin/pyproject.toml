@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drone-agent-spatial-search"
+version = "0.1.0"
+description = "Lawnmower Search Agent v0.2 candidate plugin for drone spatial search tasks"
+requires-python = ">=3.13"
+dependencies = ["drone-platform==0.1.0"]
+
+[project.entry-points."drone.plugins.v02"]
+"drone.agent.spatial_search" = "drone_spatial_search:create_agent"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["drone_spatial_search"]
+
+[tool.setuptools.package-data]
+drone_spatial_search = ["drone_plugin.json"]

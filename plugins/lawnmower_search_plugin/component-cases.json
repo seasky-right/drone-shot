@@ -1,0 +1,45 @@
+{
+  "drone.agent.spatial_search/agent": {
+    "config": {
+      "lane_spacing_m": 2.0,
+      "min_confidence": 0.5,
+      "waypoint_tolerance_m": 0.3,
+      "action_deadline_s": 1.0
+    },
+    "probe": {
+      "mode": "vehicle",
+      "snapshot": {
+        "schema": "drone.platform.contract/v0.2",
+        "sequence": 0,
+        "observations": {
+          "A": {
+            "schema": "drone.platform.contract/v0.2",
+            "sequence": 0,
+            "vehicle_id": "A",
+            "wall_time_ns": 1,
+            "state": {
+              "north_m": 0.0,
+              "east_m": 0.0,
+              "down_m": -2.0,
+              "search_area": {
+                "north": [0.0, 6.0],
+                "east": [0.0, 6.0],
+                "down": [-4.0, -1.0]
+              },
+              "detections": [
+                {
+                  "target_id": "T1",
+                  "north_m": 3.2,
+                  "east_m": 4.0,
+                  "down_m": -2.0,
+                  "confidence": 0.8
+                }
+              ],
+              "reports": []
+            }
+          }
+        }
+      }
+    }
+  }
+}

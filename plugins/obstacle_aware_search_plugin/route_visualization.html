@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>无人机空间搜索避障航线对比示意图</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f1f5f9;
+      color: #1e293b;
+    }
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+    h1 {
+      font-size: 24px;
+      margin-top: 0;
+      margin-bottom: 8px;
+      color: #0f172a;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 24px;
+    }
+    .svg-wrapper {
+      width: 100%;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #ffffff;
+    }
+    .table-section {
+      margin-top: 32px;
+    }
+    h2 {
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: #1e293b;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      text-align: left;
+    }
+    th {
+      background: #f8fafc;
+      color: #475569;
+      font-weight: 600;
+    }
+    .badge-success {
+      background: #dcfce7;
+      color: #15803d;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-failed {
+      background: #fee2e2;
+      color: #b91c1c;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .note {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>无人机空间搜索避障航线对比示意图 (Seed 7, 6m×6m 网格)</h1>
+    <div class="subtitle">Obstacle-Aware Search Agent (几何绕行避障) vs Baseline Lawnmower (航带穿障拒绝/碰撞)</div>
+
+    <div class="svg-wrapper">
+      <!-- Embedded SVG -->
+      <object type="image/svg+xml" data="route_visualization.svg" style="width: 100%; height: auto; display: block;"></object>
+    </div>
+
+    <div class="table-section">
+      <h2>同场景严密指标对比 (Seed 7, lane_spacing_m = 3.0m, Obstacle at (3, 3, r=0.75))</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>评测指标</th>
+            <th>Baseline Lawnmower (配置障碍物)</th>
+            <th>Baseline Lawnmower (未配置障碍物)</th>
+            <th>ObstacleAwareSearchAgentV02 (新Agent)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>任务终态 (Status)</strong></td>
+            <td><span class="badge-failed">REJECTED (契约拒绝)</span></td>
+            <td><span class="badge-failed">FAILED (碰撞中止)</span></td>
+            <td><span class="badge-success">SUCCESS (成功完成)</span></td>
+          </tr>
+          <tr>
+            <td><strong>动作发出情况</strong></td>
+            <td>0 步 (预检航段穿障，拒绝发出危险移动)</td>
+            <td>发往 (6.0, 3.0) 穿障碰撞</td>
+            <td>4 步全部执行通过 (经由绕行点安全通过)</td>
+          </tr>
+          <tr>
+            <td><strong>碰撞拦截拒绝次数</strong></td>
+            <td>1 次 (Agent 内部主动拦截)</td>
+            <td>1 次 (仿真后端拦截碰撞)</td>
+            <td><strong>0 次 (完美避障，全绿执行)</strong></td>
+          </tr>
+          <tr>
+            <td><strong>飞行总航程 (Distance)</strong></td>
+            <td>0.000 m</td>
+            <td>6.000 m (中途碰撞)</td>
+            <td>12.000 m (完成全域搜索巡视)</td>
+          </tr>
+          <tr>
+            <td><strong>目标检出与匹配 (Matched)</strong></td>
+            <td>0.0 (未到达)</td>
+            <td>0.0 (未到达)</td>
+            <td><strong>1.0 (成功检出并精准匹配)</strong></td>
+          </tr>
+          <tr>
+            <td><strong>误报数 (False Positives)</strong></td>
+            <td>0.0</td>
+            <td>0.0</td>
+            <td><strong>0.0 (回显去重严格抑制)</strong></td>
+          </tr>
+          <tr>
+            <td><strong>定位误差 (Error)</strong></td>
+            <td>100.0 m (未完成惩罚值)</td>
+            <td>100.0 m (未完成惩罚值)</td>
+            <td><strong>0.354 m (小于容差 0.75m)</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <p><strong>说明</strong>：本离线 HTML 页面与同目录下的 <code>route_visualization.svg</code> 供直观查看航带规划、障碍物缓冲区及绕行轨迹，不充当自动化测试断言证据。全部行为已在 <code>tests/test_obstacle_aware_search_plugin.py</code> 中作为自动化测试断言通过。</p>
+    </div>
+  </div>
+</body>
+</html>

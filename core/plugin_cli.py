@@ -6,10 +6,11 @@ import argparse
 from copy import deepcopy
 from dataclasses import replace
 import json
+import math
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Event
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, Sequence
 from uuid import uuid4
 
 from contracts.data_v02 import ActionChannel, AgentBindingV02, CapabilitySetV02, ScenarioSpecV02
@@ -43,14 +44,20 @@ def _selection(value: object, kind: str) -> tuple[str, dict[str, Any]]:
 
 def _multi_selections(data: Mapping[str, Any]) -> dict[str, tuple[str, dict[str, Any]]]:
     components = data.get("components")
-    required = {"backend", "scenario", "task", "agents"}
+    required = {"backend", "task", "agents"}
+    optional = {"scenario", "generator", "runtime", "evaluator"}
     if (not isinstance(components, dict) or not required <= set(components)
-            or set(components) - (required | {"runtime"})):
-        raise ValueError("components must select backend, scenario, task, agents, and optional runtime")
+            or set(components) - (required | optional)
+            or ("scenario" in components) == ("generator" in components)):
+        raise ValueError("components must select backend, task, agents, and exactly one scenario or generator")
     selected = {kind: _selection(components[kind], kind)
-                for kind in ("backend", "scenario", "task")}
+                for kind in ("backend", "task")}
+    scene_role = "scenario" if "scenario" in components else "generator"
+    selected[scene_role] = _selection(components[scene_role], scene_role)
     if "runtime" in components:
         selected["runtime"] = _selection(components["runtime"], "runtime")
+    if "evaluator" in components:
+        selected["evaluator"] = _selection(components["evaluator"], "evaluator")
     agents = components["agents"]
     if not isinstance(agents, dict) or not agents:
         raise ValueError("components.agents must be a nonempty object")
@@ -110,7 +117,8 @@ def _preflight(registry: PluginRegistry, data: Mapping[str, Any], *,
         raise PluginRegistryError(report.issues)
     for role, (identifier, config) in selected.items():
         expected_type = ("agent" if role.startswith("agent:") else
-                         "runtime_provider" if role == "runtime" else role)
+                         "runtime_provider" if role == "runtime" else
+                         "scenario_generator" if role == "generator" else role)
         registry.resolve(identifier, expected_type, config)
     descriptor = registry.resolve(selected["backend"][0], "backend")
     if descriptor.capabilities.get("requires_explicit_enable") and not enable_backend:
@@ -132,9 +140,21 @@ def _preflight(registry: PluginRegistry, data: Mapping[str, Any], *,
         raise PluginRegistryError((RegistryIssue(
             "unsupported_action", descriptor.source,
             f"{descriptor.id} does not declare all required actions"),))
+    checked = _resource_requirements(descriptor, requirements)
     registry.resolve(selected["backend"][0], "backend", selected["backend"][1],
-                     requirements=requirements)
+                     requirements=checked)
     return selected
+
+
+def _resource_requirements(descriptor, requirements: Mapping[str, Any]) -> dict[str, Any]:
+    checked = dict(requirements)
+    if descriptor.capabilities.get("sensor_resource_confirmation") != "post_reset":
+        return checked
+    checked["sensor_types"] = list(dict.fromkeys((
+        *requirements.get("sensor_types", ()),
+        *requirements.get("sensor_resources", {}).values())))
+    checked.pop("sensor_resources", None)
+    return checked
 
 
 def run_multi(data: Mapping[str, Any], output: Path,
@@ -178,20 +198,38 @@ def run_multi(data: Mapping[str, Any], output: Path,
         identifier, config = selected[role]
         return registry.instantiate(identifier, config,
                                     expected_type=("agent" if role.startswith("agent:") else
-                                                   "runtime_provider" if role == "runtime" else role),
+                                                   "runtime_provider" if role == "runtime" else
+                                                   "scenario_generator" if role == "generator" else role),
                                     context=context)
     scenario_item = None
+    generator = None
     runtime_item = None
     backend = None
     task = None
     agents: dict[str, object] = {}
     run_started = False
     try:
-        scenario_item = create("scenario")
+        if "generator" in selected:
+            seed = data.get("seed")
+            if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
+                raise ValueError("generator runs require a nonnegative integer seed")
+            generator = create("generator")
+            scenario_item = generator.generate(seed)
+        else:
+            scenario_item = create("scenario")
         scenario = getattr(scenario_item, "spec", scenario_item)
         truth = getattr(scenario_item, "truth", {})
         if not isinstance(scenario, ScenarioSpecV02):
             raise ValueError("scenario plugin must provide ScenarioSpecV02 or .spec")
+        if "generator" in selected and scenario.seed != seed:
+            raise ValueError("generated scenario did not record the requested seed")
+        scene_role = "generator" if generator is not None else "scenario"
+        scene_descriptor = registry.resolve(selected[scene_role][0])
+        declared_scenario = scene_descriptor.capabilities.get("scenario_id")
+        if declared_scenario is not None and declared_scenario != scenario.scenario_id:
+            raise ValueError("scenario ID differs from the selected component declaration")
+        if not isinstance(truth, Mapping) or (scenario.truth_access == "none" and truth):
+            raise ValueError("scenario truth is invalid for its access level")
         for role in selected:
             if role.startswith("agent:"):
                 agents[role.removeprefix("agent:")] = create(role)
@@ -203,11 +241,18 @@ def run_multi(data: Mapping[str, Any], output: Path,
         if not isinstance(capability, CapabilitySetV02):
             raise ValueError("backend.capabilities must return CapabilitySetV02")
         backend_descriptor = registry.resolve(selected["backend"][0], "backend")
+        supported_scenario = backend_descriptor.capabilities.get("scenario_id")
+        if supported_scenario is not None and supported_scenario != scenario.scenario_id:
+            raise PluginRegistryError((RegistryIssue(
+                "insufficient_capability", backend_descriptor.source,
+                f"{backend_descriptor.id} cannot load scenario {scenario.scenario_id}",
+                {"field": "scenario_id"}),))
         actual = capability.to_dict()
         if "scenario_id" in backend_descriptor.capabilities:
             actual["scenario_id"] = backend_descriptor.capabilities["scenario_id"]
         runtime_issues = _capability_issues(
-            replace(backend_descriptor, capabilities=actual), requirements)
+            replace(backend_descriptor, capabilities=actual),
+            _resource_requirements(backend_descriptor, requirements))
         if runtime_issues:
             raise PluginRegistryError(runtime_issues)
         action_handlers: dict[object, object] = {}
@@ -227,29 +272,40 @@ def run_multi(data: Mapping[str, Any], output: Path,
                              (json.dumps(scenario.to_dict(), ensure_ascii=False) + "\n").encode("utf-8"))
         store.write_artifact("metadata/capabilities.json",
                              (json.dumps(capability.to_dict(), ensure_ascii=False) + "\n").encode("utf-8"))
+        cleanup_components = [("scenario.close", scenario_item)]
+        if generator is not None and generator is not scenario_item:
+            cleanup_components.append(("generator.close", generator))
         engine = MultiVehicleEpisode(
             backend, capability, scenario, agents, bindings, task,
             vehicle_ids=vehicles,
             required_sensor_resources=requirements.get("sensor_resources", {}),
+            defer_sensor_resource_check=(backend_descriptor.capabilities.get(
+                "sensor_resource_confirmation") == "post_reset"),
+            on_confirmed_capabilities=lambda confirmed: store.write_artifact(
+                "metadata/capabilities-confirmed.json",
+                (json.dumps(confirmed.to_dict(), ensure_ascii=False) + "\n").encode("utf-8")),
             required_action_kinds=requirements.get("action_kinds", []),
             action_schemas=data.get("action_schemas", {}),
             payload_schemas=data.get("payload_schemas", {}),
             action_handlers=action_handlers,
-            truth=truth,
+            truth=deepcopy(dict(truth)),
             lifecycle=lifecycle,
             runtime=runtime_item,
             episode_id=episode_id,
-            cleanup_components=(("scenario.close", scenario_item),),
+            cleanup_components=cleanup_components,
         )
         run_started = True
         outcome = engine.run(max_steps=max_steps, time_budget_s=data.get("time_budget_s"))
+        trajectory = []
         for index, step in enumerate(outcome.steps):
-            store.append("trajectory.jsonl", {
+            record = {
                 "sequence": index, "before": step.before.to_dict(),
                 "actions": [action.to_dict() for action in step.actions],
                 "outcomes": [vars(item) for item in step.outcomes],
                 "after": step.after.to_dict(),
-            })
+            }
+            store.append("trajectory.jsonl", record)
+            trajectory.append(record)
         result: dict[str, object] = {
             "schema": "drone.platform.contract/v0.2",
             "episode_id": episode_id,
@@ -259,7 +315,26 @@ def run_multi(data: Mapping[str, Any], output: Path,
             "final_snapshot": outcome.final_snapshot.to_dict(),
             "cleanup_errors": list(outcome.cleanup_errors),
             "record_path": "trajectory.jsonl",
+            "scenario": scenario.to_dict(),
         }
+        if "evaluator" in selected:
+            evaluator = create("evaluator")
+            try:
+                evaluation_input = {**result, "trajectory": trajectory,
+                                    "truth": deepcopy(dict(truth)),
+                                    "artifact_root": str(store.directory)}
+                original = deepcopy(evaluation_input)
+                metrics = evaluator.evaluate(evaluation_input)
+                if evaluation_input != original:
+                    raise ValueError("evaluator modified its input")
+                if (not isinstance(metrics, Mapping) or not metrics or
+                        any(not isinstance(key, str) or not key or
+                            isinstance(value, bool) or not isinstance(value, (int, float)) or
+                            not math.isfinite(value) for key, value in metrics.items())):
+                    raise ValueError("evaluator must return finite numeric metrics")
+                result["metrics"] = dict(metrics)
+            finally:
+                evaluator.close()
         store.finish(result)
         active[0] = False
         return result
@@ -269,7 +344,8 @@ def run_multi(data: Mapping[str, Any], output: Path,
             lifecycle.close(((name, component) for name, component in
                              (("backend.close", backend), ("task.close", task),
                               *((f"agent:{name}.close", agent) for name, agent in agents.items()),
-                              ("scenario.close", scenario_item))
+                              ("scenario.close", scenario_item),
+                              ("generator.close", generator if generator is not scenario_item else None))
                              if component is not None and getattr(component, "close", None)),
                             runtime=runtime_item)
             lifecycle.end()
@@ -279,6 +355,144 @@ def run_multi(data: Mapping[str, Any], output: Path,
         except (OSError, StoreError):
             pass
         raise
+
+
+def run_benchmark(data: Mapping[str, Any], output: Path,
+                  *, registry: PluginRegistry | None = None,
+                  enable_backend: bool = False) -> dict[str, object]:
+    registry = registry or discover_plugins()
+    benchmark_id, benchmark_config = _selection(data.get("benchmark"), "benchmark")
+    registry.resolve(benchmark_id, "benchmark", benchmark_config)
+    processor_selection = (None if "processor" not in data else
+                           _selection(data["processor"], "processor"))
+    if processor_selection is not None:
+        registry.resolve(processor_selection[0], "result_processor", processor_selection[1])
+    base = deepcopy(dict(data))
+    base.pop("benchmark", None)
+    base.pop("processor", None)
+    base.pop("benchmark_id", None)
+    base.pop("episode_id", None)
+    selected = _multi_selections(base)
+    benchmark_run_id = data.get("benchmark_id") or uuid4().hex
+    if not isinstance(benchmark_run_id, str):
+        raise ValueError("benchmark_id must be a string")
+    output = Path(output)
+    store = EpisodeStore(output / "benchmarks")
+    store.start(benchmark_run_id, metadata={
+        "plugin_api": "drone.plugin.api/v0.2",
+        "benchmark": registry.resolve(benchmark_id).to_dict(),
+        "benchmark_config": registry.recordable_config(benchmark_id, benchmark_config),
+        "components": {role: registry.resolve(identifier).to_dict()
+                       for role, (identifier, _) in selected.items()},
+    })
+    active = [True]
+    context = SessionContext(benchmark_run_id, store,
+                             lambda kind, fields: store.append("events.jsonl", {
+                                 "source": "benchmark", "name": kind, "payload": dict(fields)}),
+                             lambda: active[0])
+    stage = "benchmark.instantiate"
+    active_case_id = None
+    try:
+        benchmark = registry.instantiate(benchmark_id, benchmark_config,
+                                         expected_type="benchmark", context=context)
+        stage = "benchmark.cases"
+        try:
+            cases = benchmark.cases()
+        finally:
+            benchmark.close()
+        if not isinstance(cases, Sequence) or isinstance(cases, (str, bytes)) or not cases:
+            raise ValueError("benchmark must return a nonempty case sequence")
+        prepared = []
+        case_ids = set()
+        stage = "benchmark.preflight"
+        for index, case in enumerate(cases):
+            active_case_id = None
+            if not isinstance(case, Mapping) or not isinstance(case.get("case_id"), str):
+                raise ValueError("benchmark case requires a case_id")
+            case_id = case["case_id"]
+            if not case_id or case_id in case_ids:
+                raise ValueError("benchmark case IDs must be nonempty and unique")
+            active_case_id = case_id
+            case_ids.add(case_id)
+            if set(case) - {"case_id", "scenario_seed", "seed", "task", "components"}:
+                raise ValueError("benchmark case has unsupported fields")
+            run_data = deepcopy(base)
+            overrides = case.get("components", {})
+            if not isinstance(overrides, Mapping) or set(overrides) - {
+                    "scenario", "generator", "task", "evaluator"}:
+                raise ValueError("benchmark case has invalid component overrides")
+            if "scenario" in overrides and "generator" in overrides:
+                raise ValueError("benchmark case must select one scenario source")
+            if "scenario" in overrides:
+                run_data["components"].pop("generator", None)
+                run_data.pop("seed", None)
+            if "generator" in overrides:
+                run_data["components"].pop("scenario", None)
+            run_data["components"].update(deepcopy(dict(overrides)))
+            if "task" in case:
+                run_data["components"]["task"] = {"id": case["task"]}
+            if "scenario_seed" in case and "seed" in case:
+                raise ValueError("benchmark case must use one seed field")
+            if "scenario_seed" in case or "seed" in case:
+                run_data["seed"] = case.get("seed", case.get("scenario_seed"))
+                if "generator" not in run_data["components"]:
+                    raise ValueError("benchmark case seed requires a generator")
+            if "generator" in run_data["components"]:
+                if (isinstance(run_data.get("seed"), bool) or
+                        not isinstance(run_data.get("seed"), int) or run_data["seed"] < 0):
+                    raise ValueError("benchmark case seed must be a nonnegative integer")
+            run_data["episode_id"] = f"{benchmark_run_id}-{index}"
+            _preflight(registry, run_data, enable_backend=enable_backend)
+            prepared.append((case_id, run_data))
+        entries = []
+        episode_ids = []
+        for case_id, run_data in prepared:
+            stage = "benchmark.run_case"
+            active_case_id = case_id
+            result = run_multi(run_data, output, registry=registry,
+                               enable_backend=enable_backend)
+            episode_ids.append(result["episode_id"])
+            entries.append({"case_id": case_id, "episode_id": result["episode_id"],
+                            "seed": result["scenario"]["seed"],
+                            "status": result["status"], "success": result["success"],
+                            "metrics": result.get("metrics", {})})
+        active_case_id = None
+        summary: dict[str, object] = {
+            "episode_id": benchmark_run_id,
+            "benchmark": benchmark_id,
+            "case_count": len(entries),
+            "success_count": sum(item["success"] is True for item in entries),
+            "cases": entries,
+        }
+        if processor_selection is not None:
+            identifier, config = processor_selection
+            stage = "processor.instantiate"
+            processor = registry.instantiate(identifier, config,
+                                             expected_type="result_processor", context=context)
+            try:
+                stage = "processor.process"
+                processed = processor.process(
+                    lambda episode_id: EpisodeStore.read_result(output, episode_id),
+                    tuple(episode_ids))
+                if not isinstance(processed, Mapping):
+                    raise ValueError("result processor must return a mapping")
+                summary["processed"] = dict(processed)
+            finally:
+                processor.close()
+        stage = "benchmark.finish"
+        store.finish(summary)
+        return summary
+    except BaseException as exc:
+        try:
+            context.emit("component_error", {
+                "stage": stage, "case_id": active_case_id,
+                "error": f"{type(exc).__name__}: {exc}",
+            })
+        except (OSError, StoreError):
+            pass
+        raise
+    finally:
+        active[0] = False
 
 
 def _runtime_negative_checks(data: Mapping[str, Any], registry: PluginRegistry) -> tuple[dict[str, bool], list[str]]:
@@ -350,6 +564,11 @@ def main(argv: list[str] | None = None) -> int:
     running.add_argument("--output", type=Path, default=Path("runs"))
     running.add_argument("--manifest", action="append", type=Path, default=[])
     running.add_argument("--enable-backend", action="store_true")
+    benchmark = sub.add_parser("run-benchmark", help="run and score a v0.2 benchmark case set")
+    benchmark.add_argument("config", type=Path)
+    benchmark.add_argument("--output", type=Path, default=Path("runs"))
+    benchmark.add_argument("--manifest", action="append", type=Path, default=[])
+    benchmark.add_argument("--enable-backend", action="store_true")
     show = sub.add_parser("show-result", help="read one completed v0.2 episode result")
     show.add_argument("episode_id")
     show.add_argument("--output", type=Path, default=Path("runs"))
@@ -383,6 +602,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "preflight":
             selected = _preflight(registry, data, enable_backend=args.enable_backend)
             print(json.dumps({"ok": True, "components": list(selected)}, ensure_ascii=False))
+            return 0
+        if args.command == "run-benchmark":
+            result = run_benchmark(data, args.output, registry=registry,
+                                   enable_backend=args.enable_backend)
+            print(json.dumps(result, ensure_ascii=False))
             return 0
         result = run_multi(data, args.output, registry=registry,
                            enable_backend=args.enable_backend)

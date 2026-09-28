@@ -1,0 +1,29 @@
+{
+  "benchmark_id": "spatial-direct-v1",
+  "benchmark": {"id": "sample.spatial/benchmark.reach-point-v1"},
+  "processor": {"id": "sample.spatial/processor.reach-point-v1"},
+  "components": {
+    "backend": {"id": "sample.spatial-grid/backend"},
+    "generator": {"id": "sample.spatial-grid/generator"},
+    "task": {"id": "sample.spatial/task.reach-point", "config": {"tolerance_m": 0.25}},
+    "evaluator": {"id": "sample.spatial/evaluator.reach-point", "config": {"tolerance_m": 0.25}},
+    "agents": {"pilot": {"id": "sample.spatial/agent.direct"}}
+  },
+  "vehicles": ["A"],
+  "bindings": [{"agent_id": "pilot", "vehicle_ids": ["A"]}],
+  "required_action_kinds": ["spatial/move-to"],
+  "action_schemas": {"spatial/move-to": "spatial.move-to/v1"},
+  "payload_schemas": {
+    "spatial/move-to": {
+      "type": "object",
+      "required": ["north_m", "east_m", "down_m"],
+      "properties": {
+        "north_m": {"type": "number"},
+        "east_m": {"type": "number"},
+        "down_m": {"type": "number"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "max_steps": 3
+}

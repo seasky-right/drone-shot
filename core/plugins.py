@@ -218,6 +218,10 @@ def _capabilities(value: Any, source: str, label: str) -> Mapping[str, Any]:
                        or not _NAMESPACED.fullmatch(kind) for key, kind in resources.items())):
             raise PluginRegistryError([_issue("invalid_capability", source,
                                               f"{label}.sensor_resources must map IDs to sensor kinds")])
+    if ("sensor_resource_confirmation" in capability
+            and capability["sensor_resource_confirmation"] != "post_reset"):
+        raise PluginRegistryError([_issue("invalid_capability", source,
+                                          f"{label}.sensor_resource_confirmation must be post_reset")])
     if "max_vehicles" in capability and (isinstance(capability["max_vehicles"], bool)
                                           or not isinstance(capability["max_vehicles"], int)
                                           or capability["max_vehicles"] < 1):

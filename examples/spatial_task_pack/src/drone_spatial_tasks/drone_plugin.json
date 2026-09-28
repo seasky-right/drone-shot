@@ -1,0 +1,102 @@
+{
+  "id": "sample.spatial-tasks",
+  "version": "0.1.0",
+  "type": "pack",
+  "plugin_api": "drone.plugin.api/v0.2",
+  "entry_point": "drone_spatial_tasks:register",
+  "dependencies": [],
+  "capabilities": {},
+  "config_schema": {"type": "object", "additionalProperties": false},
+  "components": [
+    {
+      "id": "sample.spatial/task.reach-point",
+      "type": "task",
+      "entry_point": "drone_spatial_tasks:create_task",
+      "capabilities": {"component_api": "drone.plugin.api/v0.2"},
+      "requires": {"action_kinds": ["spatial/move-to"], "coordinate_frame": "local_ned", "scenario_id": "sample.spatial-grid", "truth_access": true},
+      "config_schema": {"type": "object", "properties": {"tolerance_m": {"type": "number", "exclusiveMinimum": 0}}, "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial/evaluator.reach-point",
+      "type": "evaluator",
+      "entry_point": "drone_spatial_tasks:create_evaluator",
+      "capabilities": {"component_api": "drone.plugin.api/v0.2"},
+      "config_schema": {"type": "object", "properties": {"tolerance_m": {"type": "number", "exclusiveMinimum": 0}}, "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial/agent.direct",
+      "type": "agent",
+      "entry_point": "drone_spatial_tasks:create_direct_agent",
+      "capabilities": {"component_api": "drone.plugin.api/v0.2", "action_kinds": ["spatial/move-to"]},
+      "requires": {"action_kinds": ["spatial/move-to"], "coordinate_frame": "local_ned", "scenario_id": "sample.spatial-grid"},
+      "config_schema": {"type": "object", "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial/agent.staged",
+      "type": "agent",
+      "entry_point": "drone_spatial_tasks:create_staged_agent",
+      "capabilities": {"component_api": "drone.plugin.api/v0.2", "action_kinds": ["spatial/move-to"]},
+      "requires": {"action_kinds": ["spatial/move-to"], "coordinate_frame": "local_ned", "scenario_id": "sample.spatial-grid"},
+      "config_schema": {"type": "object", "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial/benchmark.reach-point-v1",
+      "type": "benchmark",
+      "entry_point": "drone_spatial_tasks:create_benchmark",
+      "capabilities": {"component_api": "drone.plugin.api/v0.2", "benchmark_version": "reach-point/v1"},
+      "config_schema": {"type": "object", "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial/processor.reach-point-v1",
+      "type": "result_processor",
+      "entry_point": "drone_spatial_tasks:create_processor",
+      "capabilities": {"component_api": "drone.plugin.api/v0.2"},
+      "config_schema": {"type": "object", "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial/task.search-target",
+      "type": "task",
+      "entry_point": "drone_spatial_tasks.search:create_task",
+      "capabilities": {"component_api": "drone.plugin.api/v0.2"},
+      "requires": {"action_kinds": ["spatial/move-to", "spatial/report-target"], "coordinate_frame": "local_ned", "scenario_id": "sample.spatial-search", "truth_access": true},
+      "config_schema": {"type": "object", "properties": {"tolerance_m": {"type": "number", "exclusiveMinimum": 0}}, "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial/evaluator.search-target",
+      "type": "evaluator",
+      "entry_point": "drone_spatial_tasks.search:create_evaluator",
+      "capabilities": {"component_api": "drone.plugin.api/v0.2"},
+      "config_schema": {"type": "object", "properties": {"tolerance_m": {"type": "number", "exclusiveMinimum": 0}, "missing_penalty_m": {"type": "number", "exclusiveMinimum": 0}}, "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial/agent.search-confident",
+      "type": "agent",
+      "entry_point": "drone_spatial_tasks.search:create_confident_agent",
+      "capabilities": {"component_api": "drone.plugin.api/v0.2", "action_kinds": ["spatial/move-to", "spatial/report-target"]},
+      "requires": {"action_kinds": ["spatial/move-to", "spatial/report-target"], "coordinate_frame": "local_ned", "scenario_id": "sample.spatial-search"},
+      "config_schema": {"type": "object", "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial/agent.search-offset",
+      "type": "agent",
+      "entry_point": "drone_spatial_tasks.search:create_offset_agent",
+      "capabilities": {"component_api": "drone.plugin.api/v0.2", "action_kinds": ["spatial/move-to", "spatial/report-target"]},
+      "requires": {"action_kinds": ["spatial/move-to", "spatial/report-target"], "coordinate_frame": "local_ned", "scenario_id": "sample.spatial-search"},
+      "config_schema": {"type": "object", "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial/benchmark.search-target-v0.1",
+      "type": "benchmark",
+      "entry_point": "drone_spatial_tasks.search:create_benchmark",
+      "capabilities": {"component_api": "drone.plugin.api/v0.2", "benchmark_version": "search-target/v0.1-experimental"},
+      "config_schema": {"type": "object", "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial/processor.search-target-v0.1",
+      "type": "result_processor",
+      "entry_point": "drone_spatial_tasks.search:create_processor",
+      "capabilities": {"component_api": "drone.plugin.api/v0.2"},
+      "config_schema": {"type": "object", "additionalProperties": false}
+    }
+  ]
+}

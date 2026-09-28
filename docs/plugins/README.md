@@ -114,10 +114,66 @@ missing action or sensor ID. Config validation errors report the failing
 JSON path and schema keyword without echoing submitted values. This first
 check proves declarations only;
 Backend capabilities and named sensor resources are checked again after
-construction. It does not prove a physical sensor exists or that hard
+construction unless the Backend explicitly defers resource confirmation as
+described below. It does not prove a physical sensor exists or that hard
 cancellation works at runtime.
 
+A Backend whose resource IDs can only be confirmed by its first observation
+may declare `"sensor_resource_confirmation": "post_reset"` in its manifest
+capabilities and list its possible `sensor_types`. For this opt-in, preflight
+checks the required sensor kinds against those types; it does not claim that
+any requested resource ID exists. The constructed Backend is checked the same
+way before reset. Immediately after reset, before any Agent action, Core
+requires every requested ID and kind in the Backend's confirmed
+`CapabilitySetV02.sensor_resources`. A missing or mismatched resource records
+`sensor_resources.confirm` in `events.jsonl`, closes the Backend and other
+components, and leaves the episode `INCOMPLETE` without `result.json`.
+`metadata/capabilities.json` records the pre-reset capability; a successful
+confirmation additionally writes `metadata/capabilities-confirmed.json`.
+Backends without this declaration retain strict ID and kind checks before
+factory import and before reset. The Backend is responsible for deriving its
+confirmed map from the actual reset observation, not merely from config.
+
 ## Run a v0.2 combination
+
+`run-multi` can select either a fixed `components.scenario` or a
+`components.generator` with a nonnegative top-level `seed`. A generator's
+`generate(seed)` returns `ScenarioSpecV02` or an object with `.spec` and
+optional `.truth`. The generated spec must record the requested seed. Only
+Task and Evaluator receive truth; Agent observations and saved results do not.
+When a Scenario or Generator declares `capabilities.scenario_id`, its returned
+spec must use that ID. A mismatch leaves the episode incomplete.
+An optional `components.evaluator` scores the completed episode before
+`result.json` is finalized. It receives the result, trajectory, truth and a
+local `artifact_root` for reading recorded sensor files, and
+returns finite numeric `metrics`. An evaluator failure leaves `INCOMPLETE`.
+The old fixed-Scenario path remains valid.
+
+`run-benchmark` selects a top-level `benchmark` and optional `processor` in
+addition to the normal episode components. Each `benchmark.cases()` entry has
+a unique `case_id`, a `seed` (or `scenario_seed`) when using a generator, and
+may override `task` or `components.scenario/generator/task/evaluator` for that
+case. Core preflights all cases, runs each with the same selected Agent(s),
+then saves per-case episode IDs, seeds, status and metrics under
+`<output>/benchmarks/<benchmark_id>/result.json`. The optional Result
+Processor receives read-only episode results for domain-specific aggregation.
+Core records success counts but does not define a task-specific score formula.
+Each generated case must have a nonnegative integer seed before the first case
+runs. A case overriding the Generator with a fixed Scenario discards the base
+seed; specifying a case seed with a fixed Scenario is rejected. A failed hook
+leaves the benchmark record `INCOMPLETE` and does not publish a summary. Its
+`events.jsonl` records the failing stage, case ID when known, and error text;
+the failed episode has its own error event.
+The Mock example exercises this flow without a simulator:
+
+```powershell
+drone-plugins run-benchmark builtin_pack/sample-benchmark-v02.json --output runs
+```
+
+This establishes orchestration, not valid randomization or benchmark policy
+for a real world. A new World/Scenario Pack must implement feasible seeded
+instances, stable resource identity and hidden truth; its Backend must report
+actual load/reset support. Real scene and scoring acceptance remain separate.
 
 `examples/external_plugin/sample.json` selects a Backend, Scenario, Task,
 central Agent, two vehicle IDs, bindings, action IDs/schema and step budget.
@@ -136,9 +192,9 @@ A Backend manifest with `requires_explicit_enable: true` requires
 `--enable-backend` during v0.2 preflight and execution. It is rejected
 before factory import without the flag.
 The v0.2 config may request `required_sensor_resources` as a mapping of
-resource IDs to sensor kinds. The CLI checks these against the Backend manifest
-before import; declared resources are then rechecked against the constructed
-Backend. A `require_hard_cancel: true` request currently fails preflight.
+resource IDs to sensor kinds. The CLI applies the manifest's resource
+confirmation policy described above. A `require_hard_cancel: true` request
+currently fails preflight.
 
 The sample wheel source should be copied outside the repository before
 building to prove it depends only on installed public packages. A source-tree

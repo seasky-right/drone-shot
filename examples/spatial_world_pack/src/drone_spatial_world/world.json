@@ -1,0 +1,29 @@
+{
+  "world_id": "sample.spatial-grid",
+  "version": "1.0.0",
+  "coordinate_frame": "local_ned",
+  "public": {
+    "bounds_m": {
+      "north": [0, 6],
+      "east": [0, 6],
+      "down": [-4, -1]
+    },
+    "obstacles": [
+      {"center_north_m": 3, "center_east_m": 3, "radius_m": 0.75}
+    ]
+  },
+  "generation": {
+    "site_spacing_m": 3,
+    "minimum_start_goal_distance_m": 3,
+    "spawn_sites": [
+      [0, 0, -2], [0, 3, -2], [0, 6, -2],
+      [3, 0, -2], [3, 6, -2],
+      [6, 0, -2], [6, 3, -2], [6, 6, -2]
+    ],
+    "goal_sites": [
+      [0, 0, -2], [0, 3, -2], [0, 6, -2],
+      [3, 0, -2], [3, 6, -2],
+      [6, 0, -2], [6, 3, -2], [6, 6, -2]
+    ]
+  }
+}

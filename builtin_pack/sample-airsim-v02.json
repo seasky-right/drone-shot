@@ -1,0 +1,16 @@
+{
+  "episode_id": "airsim-v02-single-example",
+  "components": {
+    "backend": {"id": "drone.v02.airsim/backend", "config": {"connection": {"host": "127.0.0.1", "port": 41451, "rpc_vehicle_id": "", "sensors": [{"sensor_id": "0", "kind": "rgb"}, {"sensor_id": "0", "kind": "depth"}], "control_interval_s": 0.2, "home_tolerance_m": 0.75, "hover_speed_tolerance_mps": 0.2, "land_confirm_timeout_s": 3, "land_timeout_s": 20, "move_speed_mps": 0.5, "near_ground_tolerance_m": 0.5, "position_tolerance_m": 0.2, "return_height_m": 1, "return_timeout_s": 25, "takeoff_confirm_timeout_s": 10, "takeoff_min_height_m": 0.3, "takeoff_timeout_s": 20, "spawn_position_ned": {"north_m": 4, "east_m": 0, "down_m": -2}, "spawn_confirm_timeout_s": 3, "spawn_settle_delay_s": 1.2, "return_position_tolerance_m": 0.5}}},
+    "scenario": {"id": "drone.v02.airsim/scenario", "config": {"vehicle_id": "Drone", "home": {"north_m": 4, "east_m": 0, "down_m": -0.24}}},
+    "task": {"id": "drone.v02.airsim/task.reach-point", "config": {"target": {"north_m": 4, "east_m": 0.5, "down_m": -2}, "tolerance_m": 0.35}},
+    "agents": {"pilot": {"id": "drone.v02.airsim/agent.move-to", "config": {"target": {"north_m": 4, "east_m": 0.5, "down_m": -2}, "deadline_s": 25}}}
+  },
+  "vehicles": ["Drone"],
+  "bindings": [{"agent_id": "pilot", "vehicle_ids": ["Drone"]}],
+  "required_action_kinds": ["drone/move-to"],
+  "action_schemas": {"drone/move-to": "drone.move-to/v1"},
+  "payload_schemas": {"drone/move-to": {"type": "object", "required": ["north_m", "east_m", "down_m"], "properties": {"north_m": {"type": "number"}, "east_m": {"type": "number"}, "down_m": {"type": "number"}}, "additionalProperties": false}},
+  "max_steps": 1,
+  "time_budget_s": 90
+}

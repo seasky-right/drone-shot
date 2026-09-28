@@ -110,8 +110,8 @@ def scenario_spec(seed: int) -> ScenarioSpecV02:
 
 
 class ScenarioGenerator:
-    def generate(self, seed: int) -> ScenarioSpecV02:
-        return scenario_spec(seed)
+    def generate(self, seed: int) -> Scenario:
+        return Scenario(seed, 3 + seed % 3)
 
     def close(self) -> None:
         pass

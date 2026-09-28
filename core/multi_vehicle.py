@@ -91,6 +91,8 @@ class MultiVehicleEpisode:
                  scenario: ScenarioSpecV02, agents: Mapping[str, object],
                  bindings: Sequence[AgentBindingV02], task: MultiVehicleTask,
                  *, vehicle_ids: Sequence[str], required_sensor_resources: Mapping[str, str] | None = None,
+                 defer_sensor_resource_check: bool = False,
+                 on_confirmed_capabilities: Callable[[CapabilitySetV02], None] | None = None,
                  action_schemas: Mapping[str, str] | None = None,
                  payload_schemas: Mapping[str, Mapping[str, object]] | None = None,
                  required_action_kinds: Sequence[str] = (), truth: Mapping[str, object] | None = None,
@@ -103,6 +105,8 @@ class MultiVehicleEpisode:
         self.agents, self.bindings, self.task = dict(agents), tuple(bindings), task
         self.vehicle_ids = tuple(vehicle_ids)
         self.required_sensor_resources = dict(required_sensor_resources or {})
+        self.defer_sensor_resource_check = defer_sensor_resource_check
+        self.on_confirmed_capabilities = on_confirmed_capabilities
         self.action_schemas = dict(action_schemas or {})
         self.payload_schemas = dict(payload_schemas or {})
         self.required_action_kinds = tuple(required_action_kinds)
@@ -144,9 +148,10 @@ class MultiVehicleEpisode:
             raise PreflightError("backend vehicle capacity is insufficient")
         if not {"load", "reset"}.issubset(self.capability.scenario_operations):
             raise PreflightError("backend cannot load and reset the scenario")
-        for resource_id, kind in self.required_sensor_resources.items():
-            if self.capability.sensor_resources.get(resource_id) != kind:
-                raise PreflightError(f"required sensor resource unavailable: {resource_id}")
+        if not self.defer_sensor_resource_check:
+            for resource_id, kind in self.required_sensor_resources.items():
+                if self.capability.sensor_resources.get(resource_id) != kind:
+                    raise PreflightError(f"required sensor resource unavailable: {resource_id}")
         if not set(self.required_action_kinds).issubset(self.capability.action_kinds):
             raise PreflightError("required action kind unsupported")
         if not set(self.required_action_kinds).issubset(self.action_schemas):
@@ -227,6 +232,16 @@ class MultiVehicleEpisode:
             stage = "backend.reset"
             self._snapshot = self.backend.reset(self.scenario, self.vehicle_ids)
             self._check_snapshot(self._snapshot)
+            if self.defer_sensor_resource_check:
+                stage = "sensor_resources.confirm"
+                confirmed = self.backend.capabilities()
+                if not isinstance(confirmed, CapabilitySetV02):
+                    raise ContractValidationError("backend.capabilities must return CapabilitySetV02")
+                for resource_id, kind in self.required_sensor_resources.items():
+                    if confirmed.sensor_resources.get(resource_id) != kind:
+                        raise PreflightError(f"required sensor resource unavailable after reset: {resource_id}")
+                if self.on_confirmed_capabilities is not None:
+                    self.on_confirmed_capabilities(confirmed)
             self._active = True
             self.lifecycle.emit("backend", "reset", observation_sequence=self._snapshot.sequence)
             if self._snapshot.missing_vehicles:

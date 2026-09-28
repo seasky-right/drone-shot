@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drone-spatial-task-pack"
+version = "0.1.0"
+description = "External spatial ReachPoint task and benchmark for plugin API v0.2"
+requires-python = ">=3.13,<3.14"
+dependencies = ["drone-platform==0.1.0"]
+
+[project.entry-points."drone.plugins.v02"]
+"sample.spatial-tasks" = "drone_spatial_tasks:register"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["drone_spatial_tasks"]
+
+[tool.setuptools.package-data]
+drone_spatial_tasks = ["drone_plugin.json"]

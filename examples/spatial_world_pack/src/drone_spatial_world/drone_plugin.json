@@ -1,0 +1,66 @@
+{
+  "id": "sample.spatial-world",
+  "version": "0.1.0",
+  "type": "pack",
+  "plugin_api": "drone.plugin.api/v0.2",
+  "entry_point": "drone_spatial_world:register",
+  "dependencies": [],
+  "capabilities": {},
+  "config_schema": {"type": "object", "additionalProperties": false},
+  "components": [
+    {
+      "id": "sample.spatial-grid/backend",
+      "type": "backend",
+      "entry_point": "drone_spatial_world:create_backend",
+      "capabilities": {
+        "component_api": "drone.plugin.api/v0.2",
+        "scenario_id": "sample.spatial-grid",
+        "max_vehicles": 1,
+        "action_kinds": ["spatial/move-to"],
+        "coordinate_frame": "local_ned",
+        "time_bases": ["wall"],
+        "scenario_operations": ["load", "reset"],
+        "truth_access": true,
+        "bounded_execution": true
+      },
+      "config_schema": {"type": "object", "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial-grid/generator",
+      "type": "scenario_generator",
+      "entry_point": "drone_spatial_world:create_generator",
+      "capabilities": {
+        "component_api": "drone.plugin.api/v0.2",
+        "scenario_id": "sample.spatial-grid"
+      },
+      "config_schema": {"type": "object", "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial-search/backend",
+      "type": "backend",
+      "entry_point": "drone_spatial_world:create_search_backend",
+      "capabilities": {
+        "component_api": "drone.plugin.api/v0.2",
+        "scenario_id": "sample.spatial-search",
+        "max_vehicles": 1,
+        "action_kinds": ["spatial/move-to", "spatial/report-target"],
+        "coordinate_frame": "local_ned",
+        "time_bases": ["wall"],
+        "scenario_operations": ["load", "reset"],
+        "truth_access": true,
+        "bounded_execution": true
+      },
+      "config_schema": {"type": "object", "additionalProperties": false}
+    },
+    {
+      "id": "sample.spatial-search/generator",
+      "type": "scenario_generator",
+      "entry_point": "drone_spatial_world:create_search_generator",
+      "capabilities": {
+        "component_api": "drone.plugin.api/v0.2",
+        "scenario_id": "sample.spatial-search"
+      },
+      "config_schema": {"type": "object", "additionalProperties": false}
+    }
+  ]
+}

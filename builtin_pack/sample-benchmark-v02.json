@@ -1,0 +1,25 @@
+{
+  "benchmark_id": "builtin-v02-benchmark",
+  "benchmark": {"id": "drone.v02.mock/benchmark"},
+  "processor": {"id": "drone.v02.mock/processor"},
+  "components": {
+    "backend": {"id": "drone.v02.mock/backend"},
+    "generator": {"id": "drone.v02.mock/generator"},
+    "task": {"id": "drone.v02.mock/task"},
+    "evaluator": {"id": "drone.v02.mock/evaluator"},
+    "agents": {"central": {"id": "drone.v02.mock/agent", "config": {"target_north_m": 5}}}
+  },
+  "vehicles": ["A", "B"],
+  "bindings": [{"agent_id": "central", "vehicle_ids": ["A", "B"]}],
+  "required_action_kinds": ["drone/move"],
+  "action_schemas": {"drone/move": "drone.move/v1"},
+  "payload_schemas": {
+    "drone/move": {
+      "type": "object",
+      "required": ["north_m"],
+      "properties": {"north_m": {"type": "number"}},
+      "additionalProperties": false
+    }
+  },
+  "max_steps": 2
+}

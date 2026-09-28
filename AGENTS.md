@@ -2,6 +2,8 @@
 
 Use `综述.md` for route and `docs/planning/README.md` for active work order. Code and recorded verification outrank stale PRD claims.
 
+For future work, Astra owns synthesis and planning documents, scope and acceptance criteria, and review of diffs and recorded evidence. Delegate concrete code implementation, implementation-oriented document edits, tests, and simulator experiments to a Sol subagent. Astra does not implement code or run experiments directly. If a Sol subagent is unavailable, leave implementation at planning/review and state the blocker rather than silently doing it as Astra.
+
 `材料-无人机遥感实习-AirSIM部分/`, `airsim-settings/drone.json`, and `simulator_contract/legacy_ue4_airsim.manifest.json` are frozen baseline evidence. Preserve their paths and bytes; do not run the baseline writer unless intentionally replacing the baseline.
 
 Platform code may use `contracts/` and backend abstractions. It must not import course materials or AirSim RPC directly. Keep platform observations separate from low-level sensor observations. Use no-simulator contract/Mock tests normally; record real simulator results independently.

@@ -30,10 +30,10 @@ def _registry(path: Path = MANIFEST) -> PluginRegistry:
 def test_builtin_cases_execute_each_v02_type_and_mark_legacy_unsupported():
     registry = _registry()
     cases = json.loads(CASES.read_text(encoding="utf-8"))
-    assert len(cases) == 10
+    assert len(cases) == 13
     report = validate_plugin(registry, component_cases=cases)
     results = report["component_results"]
-    assert len(results) == 24
+    assert len(results) == 28
     assert {item["type"] for key, item in results.items() if key in cases} == {
         "backend", "task", "agent", "evaluator", "scenario",
         "scenario_generator", "runtime_provider", "training_driver",
@@ -42,7 +42,9 @@ def test_builtin_cases_execute_each_v02_type_and_mark_legacy_unsupported():
     for component_id in cases:
         assert results[component_id]["status"] == "passed", results[component_id]
         assert len(results[component_id]["checks"]) >= 3
-    legacy = set(results) - set(cases)
+    airsim_backend = {"drone.v02.airsim/backend"}
+    assert results["drone.v02.airsim/backend"]["status"] == "unchecked"
+    legacy = set(results) - set(cases) - airsim_backend
     assert len(legacy) == 14
     assert all(results[key]["status"] == "unsupported" for key in legacy)
     assert all(registry.resolve(key).capabilities["component_api"]

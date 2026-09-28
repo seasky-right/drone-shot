@@ -1,0 +1,59 @@
+{
+  "sample.spatial/task.reach-point": {
+    "config": {"tolerance_m": 0.25},
+    "probe": {
+      "truth": {"goal": {"north_m": 3, "east_m": 4, "down_m": -1}},
+      "before_snapshot": {"schema": "drone.platform.contract/v0.2", "sequence": 0, "observations": {"A": {"schema": "drone.platform.contract/v0.2", "sequence": 0, "vehicle_id": "A", "wall_time_ns": 1, "state": {"north_m": 0, "east_m": 0, "down_m": 0}}}},
+      "after_snapshot": {"schema": "drone.platform.contract/v0.2", "sequence": 1, "observations": {"A": {"schema": "drone.platform.contract/v0.2", "sequence": 1, "vehicle_id": "A", "wall_time_ns": 2, "state": {"north_m": 3, "east_m": 4, "down_m": -1}}}}
+    }
+  },
+  "sample.spatial/evaluator.reach-point": {
+    "config": {"tolerance_m": 0.25},
+    "probe": {
+      "result": {
+        "episode_id": "probe", "status": "success", "success": true,
+        "truth": {"goal": {"north_m": 3, "east_m": 4, "down_m": -1}},
+        "trajectory": [],
+        "final_snapshot": {"observations": {"A": {"state": {"north_m": 3, "east_m": 4, "down_m": -1}}}}
+      }
+    }
+  },
+  "sample.spatial/agent.direct": {
+    "config": {},
+    "probe": {"mode": "vehicle", "snapshot": {"schema": "drone.platform.contract/v0.2", "sequence": 0, "observations": {"A": {"schema": "drone.platform.contract/v0.2", "sequence": 0, "vehicle_id": "A", "wall_time_ns": 1, "state": {"north_m": 0, "east_m": 0, "down_m": 0, "goal": {"north_m": 3, "east_m": 4, "down_m": -1}}}}}}
+  },
+  "sample.spatial/agent.staged": {
+    "config": {},
+    "probe": {"mode": "vehicle", "snapshot": {"schema": "drone.platform.contract/v0.2", "sequence": 0, "observations": {"A": {"schema": "drone.platform.contract/v0.2", "sequence": 0, "vehicle_id": "A", "wall_time_ns": 1, "state": {"north_m": 0, "east_m": 0, "down_m": 0, "goal": {"north_m": 3, "east_m": 4, "down_m": -1}}}}}}
+  },
+  "sample.spatial/benchmark.reach-point-v1": {"config": {}},
+  "sample.spatial/processor.reach-point-v1": {
+    "config": {},
+    "probe": {"result": {"episode_id": "probe-result", "status": "success", "success": true, "metrics": {"spatial/success_ratio": 1.0, "spatial/final_distance_m": 0.0}}}
+  },
+  "sample.spatial/task.search-target": {
+    "config": {"tolerance_m": 0.75},
+    "probe": {
+      "truth": {"target_id": "T1", "target": {"north_m": 3, "east_m": 4, "down_m": -2}},
+      "before_snapshot": {"schema": "drone.platform.contract/v0.2", "sequence": 0, "observations": {"A": {"schema": "drone.platform.contract/v0.2", "sequence": 0, "vehicle_id": "A", "wall_time_ns": 1, "state": {"north_m": 0, "east_m": 0, "down_m": -2, "reports": []}}}},
+      "after_snapshot": {"schema": "drone.platform.contract/v0.2", "sequence": 1, "observations": {"A": {"schema": "drone.platform.contract/v0.2", "sequence": 1, "vehicle_id": "A", "wall_time_ns": 2, "state": {"north_m": 0, "east_m": 0, "down_m": -2, "reports": [{"target_id": "T1", "north_m": 3.2, "east_m": 4, "down_m": -2}]}}}}
+    }
+  },
+  "sample.spatial/evaluator.search-target": {
+    "config": {"tolerance_m": 0.75, "missing_penalty_m": 100},
+    "probe": {"result": {"episode_id": "probe", "status": "step_limit", "truth": {"target_id": "T1", "target": {"north_m": 3, "east_m": 4, "down_m": -2}}, "trajectory": [], "final_snapshot": {"observations": {"A": {"state": {"detections": []}, "missing_sensors": {}}}}}}
+  },
+  "sample.spatial/agent.search-confident": {
+    "config": {},
+    "probe": {"mode": "vehicle", "snapshot": {"schema": "drone.platform.contract/v0.2", "sequence": 0, "observations": {"A": {"schema": "drone.platform.contract/v0.2", "sequence": 0, "vehicle_id": "A", "wall_time_ns": 1, "state": {"north_m": 0, "east_m": 0, "down_m": -2, "search_area": {"north": [0, 6], "east": [0, 6], "down": [-4, -1]}, "detections": [{"target_id": "T1", "north_m": 3.2, "east_m": 4, "down_m": -2, "confidence": 0.8}]}}}}}
+  },
+  "sample.spatial/agent.search-offset": {
+    "config": {},
+    "probe": {"mode": "vehicle", "snapshot": {"schema": "drone.platform.contract/v0.2", "sequence": 0, "observations": {"A": {"schema": "drone.platform.contract/v0.2", "sequence": 0, "vehicle_id": "A", "wall_time_ns": 1, "state": {"north_m": 0, "east_m": 0, "down_m": -2, "search_area": {"north": [0, 6], "east": [0, 6], "down": [-4, -1]}, "detections": [{"target_id": "T1", "north_m": 3.2, "east_m": 4, "down_m": -2, "confidence": 0.8}]}}}}}
+  },
+  "sample.spatial/benchmark.search-target-v0.1": {"config": {}},
+  "sample.spatial/processor.search-target-v0.1": {
+    "config": {},
+    "probe": {"result": {"episode_id": "probe-result", "status": "step_limit", "success": false, "metrics": {"spatial/search_success_ratio": 0.0, "spatial/search_missed_target_count": 1.0, "spatial/search_false_positive_count": 0.0, "spatial/search_initial_sensor_missing_ratio": 0.0, "spatial/search_initial_no_detection_ratio": 1.0}}}
+  }
+}

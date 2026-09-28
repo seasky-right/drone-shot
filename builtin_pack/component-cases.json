@@ -1,4 +1,7 @@
 {
+  "drone.v02.airsim/scenario": {"config": {"vehicle_id": "A"}},
+  "drone.v02.airsim/task.reach-point": {"config": {"target": {"north_m": 5, "east_m": 0, "down_m": 0}}},
+  "drone.v02.airsim/agent.move-to": {"config": {"target": {"north_m": 5, "east_m": 0, "down_m": 0}}, "probe": {"mode": "vehicle"}},
   "drone.v02.mock/backend": {
     "config": {},
     "probe": {

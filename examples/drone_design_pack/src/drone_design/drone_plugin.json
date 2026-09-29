@@ -1,0 +1,40 @@
+{
+  "id": "sample.drone-design",
+  "version": "0.1.0",
+  "type": "pack",
+  "plugin_api": "drone.plugin.api/v0.2",
+  "entry_point": "drone_design:register",
+  "dependencies": [],
+  "capabilities": {},
+  "config_schema": {"type": "object", "additionalProperties": false},
+  "components": [
+    {
+      "id": "sample.drone-design/backend",
+      "type": "backend",
+      "entry_point": "drone_design:create_backend",
+      "capabilities": {
+        "component_api": "drone.plugin.api/v0.2",
+        "environment": "mock",
+        "scenario_id": "drone.v02.mock",
+        "max_vehicles": 2,
+        "action_kinds": ["drone/move"],
+        "coordinate_frame": "local_ned",
+        "time_bases": ["wall"],
+        "scenario_operations": ["load", "reset"],
+        "truth_access": true,
+        "bounded_execution": true
+      },
+      "config_schema": {
+        "type": "object",
+        "default": {"max_speed_mps": 2.0, "step_duration_s": 1.0, "battery_capacity_wh": 6.0},
+        "required": ["max_speed_mps", "step_duration_s", "battery_capacity_wh"],
+        "properties": {
+          "max_speed_mps": {"type": "number", "exclusiveMinimum": 0, "default": 2.0},
+          "step_duration_s": {"type": "number", "exclusiveMinimum": 0, "default": 1.0},
+          "battery_capacity_wh": {"type": "number", "exclusiveMinimum": 0, "default": 6.0}
+        },
+        "additionalProperties": false
+      }
+    }
+  ]
+}

@@ -50,6 +50,7 @@ class AirSimBackend:
         self._sequence = 0
         self._home: PositionNed | None = None
         self._last_state = None
+        self._collision_guard_active = False
         self.runtime_metadata: dict[str, object] = {}
 
     def reset(self, config: BackendConfig, task: TaskSpec) -> PlatformObservation:
@@ -185,6 +186,24 @@ class AirSimBackend:
         except Exception as exc:
             raise PlatformContractException(_error(exc)) from exc
 
+    def plot_goal(self, target: PositionNed) -> None:
+        if self._adapter is None:
+            raise PlatformContractException(ContractError("not_connected", "AirSimBackend has no active session"))
+        try:
+            self._adapter.plot_goal(PoseNed(target.north_m, target.east_m, target.down_m))
+        except Exception as exc:
+            raise PlatformContractException(_error(exc)) from exc
+
+    def collision_info(self) -> dict[str, object]:
+        if self._adapter is None:
+            raise PlatformContractException(ContractError("not_connected", "AirSimBackend has no active session"))
+        try:
+            raw = self._adapter.collision_info(self._rpc_vehicle_id())
+            return {"has_collided": raw["has_collided"],
+                    "time_stamp": raw.get("time_stamp")}
+        except Exception as exc:
+            raise PlatformContractException(_error(exc)) from exc
+
     def execute(self, action: Action) -> ExecutionResult:
         now = time.time_ns()
         if self._adapter is None or self._config is None:
@@ -202,7 +221,11 @@ class AirSimBackend:
                     "hover speed was not confirmed",
                 )
             elif action.kind is ActionKind.MOVE_TO:
-                self._move_to(action.target_position_ned, max(0.001, action.deadline_s - (time.monotonic() - started)))
+                self._collision_guard_active = self._options.get("abort_on_collision", False) is True
+                try:
+                    self._move_to(action.target_position_ned, max(0.001, action.deadline_s - (time.monotonic() - started)))
+                finally:
+                    self._collision_guard_active = False
             else:
                 return ExecutionResult(action.action_id, False, True, False, time.time_ns(), ContractError("not_supported", f"unsupported action {action.kind}"))
             if time.monotonic() - started > action.deadline_s:
@@ -221,6 +244,9 @@ class AirSimBackend:
         interval = _number(self._options, "control_interval_s", 0.25)
         while True:
             state = self._state()
+            if self._collision_guard_active and self.collision_info()["has_collided"]:
+                raise PlatformContractException(ContractError(
+                    "collision", "AirSim reported a collision during move_to"))
             dx = target.north_m - state.pose_ned.north_m
             dy = target.east_m - state.pose_ned.east_m
             dz = target.down_m - state.pose_ned.down_m

@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+import pytest
+
 from contracts.data_v02 import ActionChannel, ActionV02
 from core.conformance import validate_component_cases, validate_plugin
-from core.plugin_cli import run_multi
-from core.plugins import PluginRegistry
+from core.plugin_cli import _preflight, run_multi
+from core.plugins import PluginRegistry, PluginRegistryError
 from core.store import EpisodeStore
 
 
@@ -30,10 +33,10 @@ def _registry(path: Path = MANIFEST) -> PluginRegistry:
 def test_builtin_cases_execute_each_v02_type_and_mark_legacy_unsupported():
     registry = _registry()
     cases = json.loads(CASES.read_text(encoding="utf-8"))
-    assert len(cases) == 13
+    assert len(cases) == 16
     report = validate_plugin(registry, component_cases=cases)
     results = report["component_results"]
-    assert len(results) == 28
+    assert len(results) == 31
     assert {item["type"] for key, item in results.items() if key in cases} == {
         "backend", "task", "agent", "evaluator", "scenario",
         "scenario_generator", "runtime_provider", "training_driver",
@@ -62,6 +65,36 @@ def test_v02_builtin_mock_runs_two_vehicles_and_rereads_result():
     assert set(result["final_snapshot"]["observations"]) == {"A", "B"}
     assert all("ground_truth" not in observation and "truth" not in observation
                for observation in result["final_snapshot"]["observations"].values())
+
+
+@pytest.mark.parametrize("backend,scene_role,scene", [
+    ("drone.v02.mock/backend", "scenario", "drone.v02.airsim/scenario"),
+    ("drone.v02.airsim/backend", "scenario", "drone.v02.mock/scenario"),
+    ("drone.v02.airsim/backend", "generator", "drone.v02.mock/generator"),
+])
+def test_incompatible_environment_fails_before_instantiation_or_output(
+        tmp_path, backend, scene_role, scene):
+    data = deepcopy(json.loads(SAMPLE.read_text(encoding="utf-8")))
+    data["components"]["backend"]["id"] = backend
+    data["components"].pop("scenario")
+    data["components"][scene_role] = {"id": scene}
+    if scene == "drone.v02.airsim/scenario":
+        data["components"][scene_role]["config"] = {
+            "target": {"north_m": 4, "east_m": 0.5, "down_m": -2}}
+    if scene_role == "generator":
+        data["seed"] = 7
+    registry = _registry()
+    with pytest.raises(PluginRegistryError) as caught:
+        _preflight(registry, data, enable_backend=True)
+    issue = caught.value.issues[0]
+    assert issue.code == "incompatible_environment"
+    assert issue.details["backend"] == backend
+    assert issue.details["scenario_source"] == scene
+    with patch.object(registry, "instantiate", side_effect=AssertionError("factory called")):
+        with pytest.raises(PluginRegistryError) as caught:
+            run_multi(data, tmp_path / "runs", registry=registry, enable_backend=True)
+    assert caught.value.issues[0].code == "incompatible_environment"
+    assert not (tmp_path / "runs").exists()
 
 
 def test_declared_backend_capacity_mismatch_fails_the_executable_probe(tmp_path):

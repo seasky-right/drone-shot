@@ -227,10 +227,10 @@ def _capabilities(value: Any, source: str, label: str) -> Mapping[str, Any]:
                                           or capability["max_vehicles"] < 1):
         raise PluginRegistryError([_issue("invalid_capability", source,
                                           f"{label}.max_vehicles must be positive")])
-    if "coordinate_frame" in capability and (not isinstance(capability["coordinate_frame"], str)
-                                             or not capability["coordinate_frame"]):
-        raise PluginRegistryError([_issue("invalid_capability", source,
-                                          f"{label}.coordinate_frame must be nonempty text")])
+    for key in ("coordinate_frame", "environment"):
+        if key in capability and (not isinstance(capability[key], str) or not capability[key]):
+            raise PluginRegistryError([_issue("invalid_capability", source,
+                                              f"{label}.{key} must be nonempty text")])
     if "scenario_id" in capability and (not isinstance(capability["scenario_id"], str)
                                          or not capability["scenario_id"]):
         raise PluginRegistryError([_issue("invalid_capability", source,
@@ -254,7 +254,7 @@ def _validate_requirements(value: Any, source: str) -> Mapping[str, Any]:
     required = value
     allowed = {"action_kinds", "sensor_types", "sensor_resources", "coordinate_frame",
                "time_bases", "min_vehicles", "scenario_operations", "truth_access",
-               "bounded_execution", "hard_cancel", "scenario_id"}
+               "bounded_execution", "hard_cancel", "scenario_id", "environment"}
     unknown = sorted(required.keys() - allowed)
     if unknown:
         raise PluginRegistryError([_issue("invalid_capability_requirement", source,
@@ -297,10 +297,11 @@ def _capability_issues(component: ComponentDescriptor,
             issues.append(_issue("insufficient_capability", source,
                                  f"{component.id} does not declare sensor resource {resource_id}",
                                  field="sensor_resources", resource_id=resource_id))
-    for key in ("coordinate_frame", "scenario_id"):
+    for key in ("coordinate_frame", "scenario_id", "environment"):
         if key in required and declared.get(key) != required[key]:
             issues.append(_issue("insufficient_capability", source,
-                                 f"{component.id} does not declare required {key}", field=key))
+                                 f"{component.id} does not declare required {key}",
+                                 field=key, required=required[key], declared=declared.get(key)))
     if vehicles is not None and declared.get("max_vehicles", 0) < vehicles:
         issues.append(_issue("insufficient_capability", source,
                              f"{component.id} declares insufficient vehicle capacity",
@@ -511,9 +512,9 @@ def _parse_manifest(value: Any, source: str, advertised_id: str | None,
             raise PluginRegistryError([_issue("invalid_type", source,
                                               f"unknown component type {item['type']!r}")])
         requires = _validate_requirements(item.get("requires", {}), source)
-        if requires and item["type"] not in {"task", "agent", "scenario"}:
+        if requires and item["type"] not in {"task", "agent", "scenario", "scenario_generator"}:
             raise PluginRegistryError([_issue("invalid_capability_requirement", source,
-                                              "requires is supported only on task, agent, and scenario")])
+                                              "requires is supported only on task, agent, scenario, and scenario_generator")])
         result.append(ComponentDescriptor(
             comp_id, item["type"], pack_id, version, api,
             _entry_point(item["entry_point"], source, "component entry_point"), deps,

@@ -13,7 +13,7 @@ from threading import Event
 from typing import Any, Callable, Mapping, Sequence
 from uuid import uuid4
 
-from contracts.data_v02 import ActionChannel, AgentBindingV02, CapabilitySetV02, ScenarioSpecV02
+from contracts.data_v02 import ActionChannel, AgentBindingV02, CapabilitySetV02, EpisodeSnapshotV02, ScenarioSpecV02
 from contracts.model import ContractValidationError
 
 from .assembly import discover_plugins
@@ -101,9 +101,9 @@ def _combined_requirements(registry: PluginRegistry,
                     f"incompatible requirements for {key}", {"field": key}),))
             else:
                 merged[key] = value
-    for role, (identifier, _) in selected.items():
-        if role == "task" or role == "scenario" or role.startswith("agent:"):
-            descriptor = registry.resolve(identifier)
+    for role, (identifier, config) in selected.items():
+        if role in ("task", "scenario", "generator") or role.startswith("agent:"):
+            descriptor = registry.resolve(identifier, config=config)
             add(descriptor.requires, descriptor.source)
     add(explicit, "configuration")
     return merged
@@ -121,16 +121,22 @@ def _preflight(registry: PluginRegistry, data: Mapping[str, Any], *,
                          "scenario_generator" if role == "generator" else role)
         registry.resolve(identifier, expected_type, config)
     descriptor = registry.resolve(selected["backend"][0], "backend")
-    if descriptor.capabilities.get("requires_explicit_enable") and not enable_backend:
-        raise PluginRegistryError((RegistryIssue(
-            "explicit_enable_required", descriptor.source,
-            f"{descriptor.id} requires --enable-backend"),))
     vehicles = data.get("vehicles")
     if not isinstance(vehicles, list) or not vehicles:
         raise ValueError("vehicles must be a nonempty array")
     requirements = _combined_requirements(registry, selected, data)
     required = requirements.get("action_kinds", [])
     declared = descriptor.capabilities
+    scene_role = "scenario" if "scenario" in selected else "generator"
+    scene_id = selected[scene_role][0]
+    environment = registry.resolve(scene_id).requires.get("environment")
+    if environment is not None and declared.get("environment") != environment:
+        raise PluginRegistryError((RegistryIssue(
+            "incompatible_environment", descriptor.source,
+            f"{descriptor.id} cannot run {scene_id}: environment {environment} required",
+            {"field": "environment", "backend": descriptor.id,
+             "scenario_source": scene_id, "required": environment,
+             "declared": declared.get("environment")}),))
     if "max_vehicles" in declared and len(vehicles) > declared["max_vehicles"]:
         raise PluginRegistryError((RegistryIssue(
             "insufficient_capacity", descriptor.source,
@@ -143,6 +149,10 @@ def _preflight(registry: PluginRegistry, data: Mapping[str, Any], *,
     checked = _resource_requirements(descriptor, requirements)
     registry.resolve(selected["backend"][0], "backend", selected["backend"][1],
                      requirements=checked)
+    if descriptor.capabilities.get("requires_explicit_enable") and not enable_backend:
+        raise PluginRegistryError((RegistryIssue(
+            "explicit_enable_required", descriptor.source,
+            f"{descriptor.id} requires --enable-backend"),))
     return selected
 
 
@@ -161,6 +171,7 @@ def run_multi(data: Mapping[str, Any], output: Path,
               *, registry: PluginRegistry | None = None,
               enable_backend: bool = False,
               on_event: Callable[[dict[str, object]], None] | None = None,
+              on_snapshot: Callable[[EpisodeSnapshotV02, Path], None] | None = None,
               cancel_event: Event | None = None) -> dict[str, object]:
     registry = registry or discover_plugins()
     selected = _preflight(registry, data, enable_backend=enable_backend)
@@ -250,6 +261,8 @@ def run_multi(data: Mapping[str, Any], output: Path,
         actual = capability.to_dict()
         if "scenario_id" in backend_descriptor.capabilities:
             actual["scenario_id"] = backend_descriptor.capabilities["scenario_id"]
+        if "environment" in backend_descriptor.capabilities:
+            actual["environment"] = backend_descriptor.capabilities["environment"]
         runtime_issues = _capability_issues(
             replace(backend_descriptor, capabilities=actual),
             _resource_requirements(backend_descriptor, requirements))
@@ -293,6 +306,7 @@ def run_multi(data: Mapping[str, Any], output: Path,
             runtime=runtime_item,
             episode_id=episode_id,
             cleanup_components=cleanup_components,
+            on_snapshot=(lambda snapshot: on_snapshot(snapshot, store.directory)) if on_snapshot else None,
         )
         run_started = True
         outcome = engine.run(max_steps=max_steps, time_budget_s=data.get("time_budget_s"))

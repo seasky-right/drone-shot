@@ -93,19 +93,27 @@ assert not unavailable.ok
 print([issue.to_dict() for issue in unavailable.issues])
 ```
 
-Requirements may also name `sensor_types`, `coordinate_frame`, `time_bases`,
-`scenario_operations`, `scenario_id`, `truth_access`, and `bounded_execution`.
+Requirements may also name `sensor_types`, `coordinate_frame`, `environment`,
+`time_bases`, `scenario_operations`, `scenario_id`, `truth_access`, and
+`bounded_execution`.
 `requires` uses these same keys, plus `sensor_resources`, `action_kinds`,
 and `min_vehicles`. For example, a Task may declare
 `{"sensor_types": ["sample.sensor/rgb"], "sensor_resources": {"front": "sample.sensor/rgb"}, "coordinate_frame": "local_ned"}`;
 an Agent may declare `{"action_kinds": ["sample/move"]}`.
-In `run-multi`, Core combines the selected Task, Scenario, and Agent
+In `run-multi`, Core combines the selected Task, Scenario or Generator, and Agent
 requirements with explicit run requirements. Arrays form a union; vehicle
 minimums take the maximum; true flags remain required. Conflicting scalar
 values or kinds for the same sensor resource return
 `conflicting_capability_requirement`. Run config cannot remove a component
 requirement. Each declared Backend capability is checked before any factory
 import; the constructed Backend's `CapabilitySetV02` is checked before reset.
+Scenario sources can require an `environment` supplied by the Backend, such as
+`mock` or `airsim`. This checks the execution environment while allowing a
+Backend to support multiple scenario IDs. An incompatible selection reports
+`incompatible_environment` with both component IDs before Backend creation.
+`environment` is a manifest-level declaration; `CapabilitySetV02` does not
+expose a runtime environment field, so the runtime recheck retains that
+declaration while verifying the other Backend capabilities.
 The combined requirements are recorded in the episode entry.
 `hard_cancel: true` is rejected with `hard_cancel_unverified` until a runtime
 proof interface exists; an `interruptible` declaration alone is insufficient.

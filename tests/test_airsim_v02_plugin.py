@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from backends.airsim import AirSimBackend
 from builtin_pack.airsim_v02 import AirSimBackendV02, MoveToAgent
-from core.plugin_cli import _preflight, run_multi
+from core.plugin_cli import _preflight, run_benchmark, run_multi
 from core.plugins import PluginRegistry, PluginRegistryError
 from core.store import EpisodeStore
 from simulator_contract.legacy_airsim import AirSimLegacyAdapter
@@ -21,6 +21,7 @@ from tests.test_airsim_backend import FakeRpc
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "builtin_pack" / "drone_plugin.json"
 SAMPLE = ROOT / "builtin_pack" / "sample-airsim-v02.json"
+BENCHMARK = ROOT / "builtin_pack" / "sample-airsim-reach-benchmark-v02.json"
 
 
 class ImageRpc(FakeRpc):
@@ -64,6 +65,12 @@ class AirSimV02PluginTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             result = self.run_fake(Path(directory))
             self.assertTrue(result["success"])
+            self.assertEqual(result["metrics"]["airsim/sampled_safe_success"], 1)
+            marker = next(call for call in self.rpc.calls if call[0] == "simPlotPoints")
+            self.assertEqual(marker[1][0], [{"x_val": 4.0, "y_val": 0.5, "z_val": -2.0}])
+            self.assertEqual(marker[1][-2:], (120.0, False))
+            self.assertEqual(result["final_snapshot"]["observations"]["Drone"]["state"]["target"],
+                             self.data["components"]["scenario"]["config"]["target"])
             self.assertEqual(EpisodeStore.read_result(directory, result["episode_id"]), result)
             episode = Path(directory) / result["episode_id"]
             before = json.loads((episode / "trajectory.jsonl").read_text(encoding="utf-8"))
@@ -128,6 +135,42 @@ class AirSimV02PluginTests(unittest.TestCase):
             self.assertIn("land", [call[0] for call in self.rpc.calls])
             self.assertTrue(self.rpc.closed)
 
+    def test_collision_aborts_move_and_is_not_scored_safe(self):
+        class CollidingRpc(ImageRpc):
+            def call(self, method, *params, timeout):
+                if method == "simGetCollisionInfo":
+                    self.calls.append((method, params, timeout))
+                    return {"has_collided": True, "time_stamp": 123}
+                return super().call(method, *params, timeout=timeout)
+        self.rpc = CollidingRpc()
+        with TemporaryDirectory() as directory:
+            result = self.run_fake(Path(directory))
+        self.assertFalse(result["success"])
+        self.assertEqual(result["metrics"]["airsim/sampled_safe_success"], 0)
+        self.assertGreater(result["metrics"]["airsim/collision_positive_sample_count"], 0)
+        self.assertNotIn("moveByVelocityBodyFrame", [call[0] for call in self.rpc.calls])
+        self.assertIn("land", [call[0] for call in self.rpc.calls])
+
+    def test_fixed_scene_benchmark_counts_all_completed_attempts(self):
+        data = json.loads(BENCHMARK.read_text(encoding="utf-8"))
+        rpcs = []
+        def factory():
+            rpc = ImageRpc()
+            if rpcs:
+                rpc.fail_method = "moveByVelocityBodyFrame"
+            rpcs.append(rpc)
+            return AirSimBackend(lambda **options: AirSimLegacyAdapter(
+                rpc_factory=lambda host, port: rpc, **options))
+        with TemporaryDirectory() as directory:
+            with patch("builtin_pack.airsim_v02.AirSimBackend", side_effect=factory):
+                summary = run_benchmark(data, Path(directory), registry=self.registry,
+                                        enable_backend=True)
+        self.assertEqual(summary["case_count"], 2)
+        self.assertEqual(summary["processed"]["sampled_safe_success_count"], 1)
+        self.assertEqual(summary["processed"]["failure_count"], 1)
+        self.assertEqual(summary["processed"]["success_rate_all_attempts"], 0.5)
+        self.assertEqual(len(rpcs), 2)
+
     def test_missing_camera_fails_reset_and_releases_control(self):
         self.rpc.image_payloads = [b""]
         with TemporaryDirectory() as directory:
@@ -136,6 +179,16 @@ class AirSimV02PluginTests(unittest.TestCase):
             self.assertIn("land", [call[0] for call in self.rpc.calls])
             self.assertTrue(self.rpc.closed)
 
+    def test_marker_failure_prevents_agent_action_and_cleans_up(self):
+        self.rpc.fail_method = "simPlotPoints"
+        with TemporaryDirectory() as directory:
+            with patch.object(MoveToAgent, "act", side_effect=AssertionError("agent acted")):
+                with self.assertRaisesRegex(Exception, "simPlotPoints returned false"):
+                    self.run_fake(Path(directory))
+        self.assertNotIn("moveByVelocityBodyFrame", [call[0] for call in self.rpc.calls])
+        self.assertIn("land", [call[0] for call in self.rpc.calls])
+        self.assertTrue(self.rpc.closed)
+
     def test_preflight_requires_enable_and_enforces_single_vehicle(self):
         with self.assertRaises(PluginRegistryError):
             _preflight(self.registry, self.data)
@@ -143,6 +196,23 @@ class AirSimV02PluginTests(unittest.TestCase):
         doubled["vehicles"].append("drone-2")
         with self.assertRaises(PluginRegistryError):
             _preflight(self.registry, doubled, enable_backend=True)
+
+    def test_preflight_accepts_another_airsim_scenario_id(self):
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        scene = next(item for item in manifest["components"]
+                     if item["id"] == "drone.v02.airsim/scenario")
+        scene["id"] = "drone.v02.airsim/scenario.future"
+        scene["capabilities"]["scenario_id"] = "drone.future-ue4"
+        data = deepcopy(self.data)
+        data["components"]["scenario"]["id"] = scene["id"]
+        data["components"]["backend"]["config"]["scenario_id"] = "drone.future-ue4"
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "drone_plugin.json"
+            path.write_text(json.dumps(manifest), encoding="utf-8")
+            registry = PluginRegistry.discover(manifest_paths=(path,))
+            self.assertFalse(registry.issues)
+            self.assertTrue(_preflight(registry, data, enable_backend=True))
+            self.assertEqual(list(Path(directory).iterdir()), [path])
 
     def test_invalid_resource_confirmation_declaration_is_rejected(self):
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))

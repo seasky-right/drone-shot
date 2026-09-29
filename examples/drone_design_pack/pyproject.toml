@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drone-design-sample"
+version = "0.1.0"
+description = "Configurable no-simulator drone design backend for Plugin API v0.2"
+requires-python = ">=3.13,<3.14"
+dependencies = ["drone-platform==0.1.0"]
+
+[project.entry-points."drone.plugins.v02"]
+"sample.drone-design" = "drone_design:register"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["drone_design"]
+
+[tool.setuptools.package-data]
+drone_design = ["drone_plugin.json"]

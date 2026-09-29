@@ -13,7 +13,7 @@ from unittest.mock import patch
 import pytest
 
 from core.plugin_cli import main, run_benchmark, run_multi
-from core.plugins import PluginRegistry
+from core.plugins import PluginRegistry, PluginRegistryError
 from core.store import EpisodeStore
 
 
@@ -50,6 +50,29 @@ def test_benchmark_generates_scores_and_rereads_two_cases(tmp_path):
         episode = tmp_path / result["episode_id"]
         assert "target_north_m" not in (episode / "result.json").read_text(encoding="utf-8")
         assert "target_north_m" not in (episode / "trajectory.jsonl").read_text(encoding="utf-8")
+
+
+def test_benchmark_case_environment_conflict_blocks_all_episodes(tmp_path):
+    import builtin_pack.v02 as builtin_v02
+
+    class IncompatibleBenchmark:
+        def cases(self):
+            return ({"case_id": "foreign-scene", "components": {
+                "scenario": {"id": "drone.v02.airsim/scenario", "config": {
+                    "target": {"north_m": 4, "east_m": 0.5, "down_m": -2}}}}},)
+
+        def close(self):
+            pass
+
+    data = _sample()
+    with patch.object(builtin_v02, "create_benchmark", return_value=IncompatibleBenchmark()):
+        with pytest.raises(PluginRegistryError) as caught:
+            run_benchmark(data, tmp_path, registry=_registry())
+    assert caught.value.issues[0].code == "incompatible_environment"
+    assert not (tmp_path / f"{data['benchmark_id']}-0").exists()
+    benchmark_root = tmp_path / "benchmarks" / data["benchmark_id"]
+    assert (benchmark_root / "INCOMPLETE").is_file()
+    assert not (benchmark_root / "result.json").exists()
 
 
 def test_benchmark_cli_uses_selected_pack_without_a_simulator(tmp_path):

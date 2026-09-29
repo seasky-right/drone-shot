@@ -100,7 +100,8 @@ class MultiVehicleEpisode:
                  clock: Callable[[], float] = time.monotonic,
                  lifecycle: EpisodeLifecycle | None = None, runtime=None,
                  episode_id: str | None = None,
-                 cleanup_components: Sequence[tuple[str, object]] = ()) -> None:
+                 cleanup_components: Sequence[tuple[str, object]] = (),
+                 on_snapshot: Callable[[EpisodeSnapshotV02], None] | None = None) -> None:
         self.backend, self.capability, self.scenario = backend, capability, scenario
         self.agents, self.bindings, self.task = dict(agents), tuple(bindings), task
         self.vehicle_ids = tuple(vehicle_ids)
@@ -117,6 +118,7 @@ class MultiVehicleEpisode:
         self.runtime = runtime
         self.episode_id = episode_id or uuid4().hex
         self.cleanup_components = tuple(cleanup_components)
+        self.on_snapshot = on_snapshot
         self._active = False
         self._closed = False
         self.result: MultiVehicleResult | None = None
@@ -244,6 +246,7 @@ class MultiVehicleEpisode:
                     self.on_confirmed_capabilities(confirmed)
             self._active = True
             self.lifecycle.emit("backend", "reset", observation_sequence=self._snapshot.sequence)
+            self._notify_snapshot(self._snapshot)
             if self._snapshot.missing_vehicles:
                 self.stop(EpisodeStatus.PARTIAL_FAILURE)
             return self._snapshot
@@ -315,6 +318,7 @@ class MultiVehicleEpisode:
                 raise ContractValidationError("snapshot sequence did not advance")
             self._steps.append(MultiVehicleStep(before, actions, tuple(outcomes), after))
             self._snapshot = after
+            self._notify_snapshot(after)
             signal = self._checkpoint()
             if cancelled_after_action or signal == "cancelled":
                 return self.stop(EpisodeStatus.CANCELLED)
@@ -376,3 +380,10 @@ class MultiVehicleEpisode:
             raise ContractValidationError("backend must return EpisodeSnapshotV02")
         if set(snapshot.observations) | set(snapshot.missing_vehicles) != set(self.vehicle_ids):
             raise ContractValidationError("snapshot vehicle IDs differ from configured vehicles")
+
+    def _notify_snapshot(self, snapshot: EpisodeSnapshotV02) -> None:
+        if self.on_snapshot is not None:
+            try:
+                self.on_snapshot(snapshot)
+            except Exception:
+                self.on_snapshot = None

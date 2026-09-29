@@ -133,6 +133,20 @@ class AirSimLegacyAdapter:
             landed=(None if state.get("landed_state") is None else _optional_int(state.get("landed_state")) == 0),
         )
 
+    def plot_goal(self, position: PoseNed) -> None:
+        point = {"x_val": position.north_m, "y_val": position.east_m,
+                 "z_val": position.down_m}
+        response = self._call("simPlotPoints", [point], [0.0, 1.0, 0.1, 1.0],
+                              20.0, 120.0, False)
+        if response is False:
+            raise AirSimAdapterError("simPlotPoints returned false")
+
+    def collision_info(self, vehicle_id: str) -> Mapping[str, object]:
+        info = self._call("simGetCollisionInfo", vehicle_id)
+        if not isinstance(info, Mapping) or not isinstance(info.get("has_collided"), bool):
+            raise AirSimAdapterError("simGetCollisionInfo returned an invalid payload")
+        return info
+
     def reset_vehicle(self) -> CommandResult:
         """AirSim reset is simulator-wide and accepts no vehicle argument."""
         try:

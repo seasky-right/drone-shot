@@ -60,6 +60,8 @@ class FakeRpc:
                     "linear_velocity": dict(zip(("x_val", "y_val", "z_val"), self.velocity)),
                 },
             }
+        if method == "simGetCollisionInfo":
+            return {"has_collided": False, "time_stamp": 123}
         if method == "simGetImages":
             payload = self.image_payloads.pop(0) if self.image_payloads is not None else b"pngdata"
             return [{"width": 1, "height": 1, "image_data_uint8": payload, "time_stamp": 456}]

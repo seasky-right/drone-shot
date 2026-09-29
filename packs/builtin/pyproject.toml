@@ -16,4 +16,4 @@ dependencies = ["drone-platform==0.1.0", "msgpack==1.1.1"]
 packages = ["builtin_pack", "agents", "backends", "backends.airsim", "backends.mock", "evaluators", "simulator_contract", "tasks"]
 
 [tool.setuptools.package-data]
-builtin_pack = ["drone_plugin.json", "component-cases.json", "sample-v02.json", "sample-airsim-v02.json", "sample-benchmark-v02.json"]
+builtin_pack = ["drone_plugin.json", "component-cases.json", "sample-v02.json", "sample-airsim-v02.json", "sample-airsim-reach-benchmark-v02.json", "sample-benchmark-v02.json", "README-airsim-reach.md"]
